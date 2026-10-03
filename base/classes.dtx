@@ -53,7 +53,7 @@
 %<*driver>
 \ProvidesFile{classes.drv}
 %</driver>
-              [2026-06-04 v1.4n
+              [2026-10-03 v1.4o
 %<article|report|book> Standard LaTeX document class]
 %<10pt|11pt|12pt>      Standard LaTeX file (size option)]
 %    \end{macrocode}
@@ -3558,14 +3558,17 @@
 %    therefore we first typeset it in a temporary box.
 % \changes{v1.2q}{1994/05/29}{Use \cs{sbox}\cs{@tempboxa} instead of
 %    \cs{setbox}\cs{@tempboxa}\cs{hbox} to make this color safe}
+% \changes{v1.4o}{2026/10/03}{No label and separator if the label is
+%    empty (\cs{caption*})}
+%    If the label is empty (\cs{caption*}) we omit the separator too.
 %    \begin{macrocode}
-  \sbox\@tempboxa{#1: #2}%
+  \sbox\@tempboxa{\if\relax\detokenize{#1}\relax\else#1: \fi#2}%
 %    \end{macrocode}
 %    We can the measure its width. It that is larger than the current
 %    |\hsize| we typeset the caption as an ordinary paragraph.
 %    \begin{macrocode}
   \ifdim \wd\@tempboxa >\hsize
-    #1: #2\par
+    \if\relax\detokenize{#1}\relax\else#1: \fi#2\par
 %    \end{macrocode}
 %    If the caption fits, we center it. Because this uses an |\hbox|
 %    directly in vertical mode, it does not execute the |\everypar|

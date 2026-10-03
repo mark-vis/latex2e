@@ -229,6 +229,67 @@
 %    \end{macrocode}
 % \end{macro}
 %
+% \begin{socketdecl}{caption/step}
+%    This socket is used by \cs{caption} (not by \cs{caption*}) to step
+%    the counter of the caption type and to set the target for links
+%    (\cs{@currentHref}). The argument is the counter name
+%    (\cs{@captype}). The default plug \plug{kernel} calls
+%    \cs{refstepcounter}. The float code of the tagging project uses the
+%    socket to set the target to the float structure instead of creating
+%    a new one.
+% \end{socketdecl}
+%
+% \begin{socketdecl}{caption/listentry}
+%    This socket writes the entry for the list of figures, tables, etc.
+%    It is used by \cs{@caption} unless the star form \cs{caption*}
+%    was used. The first argument is the caption type, the second the
+%    text for the list (the optional argument of \cs{caption}, or the
+%    caption text if it was not given). The default plug
+%    \plug{kernel} writes the entry with \cs{addcontentsline} as
+%    before; it also writes an (empty) entry if the optional argument
+%    is empty.
+%
+%    The declarations are also written to \texttt{latexrelease}, guarded,
+%    so that rolling forward from an older format works.
+%    \begin{macrocode}
+%</2ekernel>
+%<*2ekernel|latexrelease>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {caption sockets}{caption interface}%
+\IfSocketExistsF{caption/step}{%
+  \NewSocket{caption/step}{1}%
+  \NewSocketPlug{caption/step}{kernel}{\refstepcounter{#1}}%
+  \AssignSocketPlug{caption/step}{kernel}%
+}
+\IfSocketExistsF{caption/listentry}{%
+  \NewSocket{caption/listentry}{2}%
+  \NewSocketPlug{caption/listentry}{kernel}
+    {%
+      \addcontentsline{\csname ext@#1\endcsname}{#1}%
+        {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #2}}%
+    }%
+  \AssignSocketPlug{caption/listentry}{kernel}%
+}
+%    \end{macrocode}
+% \end{socketdecl}
+%
+% \begin{macro}{\if@captionstar}
+%    True while a caption is typeset by \cs{caption*}. Implementations
+%    of \cs{@makecaption} can test it; in that case the first argument
+%    of \cs{@makecaption} is empty. (\cs{@ifundefined} and not \cs{ifx}
+%    because a skipped \cs{if@captionstar} would unbalance the
+%    conditional.)
+%    \begin{macrocode}
+\@ifundefined{if@captionstar}{\newif\if@captionstar}{}
+%    \end{macrocode}
+% \end{macro}
+%
+%    \begin{macrocode}
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
+%    \end{macrocode}
+%
 % \begin{macro}{\caption}
 %
 %    This is set to be an error message outside a float since no
@@ -236,17 +297,51 @@
 %    classes.
 % \changes{v1.1u}{1999/04/19}
 %    {Made caption an error outside a float: latex/2815}
+% \changes{v1.2k}{2026/10/03}
+%    {Add star form, step the counter through the socket
+%     \texttt{caption/step}}
+%
+%    The star form \cs{caption*} typesets a caption without a label:
+%    it does not step the counter, sets no target and writes no list
+%    entry. An optional argument is accepted and ignored.
+%
+%    The counter is stepped through the socket \texttt{caption/step}.
+%    Code that has to run before the step (e.g., for a continued float)
+%    can use the generic hook \hook{cmd/caption/before}.
 %    \begin{macrocode}
+%</2ekernel>
+%<*2ekernel|latexrelease>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\caption}{star form}%
 \def\caption{%
    \ifx\@captype\@undefined
      \@latex@error{\noexpand\caption outside float}\@ehd
      \expandafter\@gobble
    \else
-     \refstepcounter\@captype
      \expandafter\@firstofone
    \fi
-   {\@dblarg{\@caption\@captype}}%
+   {\@ifstar
+      {\@captionstartrue\@dblarg{\@caption\@captype}}%
+      {\@captionstarfalse
+       \UseSocket{caption/step}{\@captype}%
+       \@dblarg{\@caption\@captype}}}%
 }
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\caption}{star form}%
+%<latexrelease>\def\caption{%
+%<latexrelease>   \ifx\@captype\@undefined
+%<latexrelease>     \@latex@error{\noexpand\caption outside float}\@ehd
+%<latexrelease>     \expandafter\@gobble
+%<latexrelease>   \else
+%<latexrelease>     \refstepcounter\@captype
+%<latexrelease>     \expandafter\@firstofone
+%<latexrelease>   \fi
+%<latexrelease>   {\@dblarg{\@caption\@captype}}%
+%<latexrelease>}
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
 %    \end{macrocode}
 % \end{macro}
 %
@@ -255,11 +350,19 @@
 %     {Use \cs{normalsize} not \cs{@normalsize}}
 % \changes{v1.1r}{1996/12/06}
 %     {Call \cs{@setminpage} if needed. latex/2318}
+% \changes{v1.2k}{2026/10/03}
+%     {Use socket \texttt{caption/listentry}; empty label for
+%      \cs{caption*}}
 %    \begin{macrocode}
+%</2ekernel>
+%<*2ekernel|latexrelease>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\@caption}{star form, list entry socket}%
 \long\def\@caption#1[#2]#3{%
   \par
-  \addcontentsline{\csname ext@#1\endcsname}{#1}%
-    {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #2}}%
+  \if@captionstar \else
+    \UseSocket{caption/listentry}{#1}{#2}%
+  \fi
   \begingroup
 %    \end{macrocode}
 %
@@ -287,8 +390,38 @@
 %
 %    \begin{macrocode}
     \normalsize
-    \@makecaption{\csname fnum@#1\endcsname}{\ignorespaces #3}\par
-  \endgroup}
+    \if@captionstar
+      \expandafter\@firstoftwo
+    \else
+      \expandafter\@secondoftwo
+    \fi
+    {\@makecaption{}}%
+    {\@makecaption{\csname fnum@#1\endcsname}}%
+      {\ignorespaces #3}\par
+  \endgroup
+%    \end{macrocode}
+%    The star flag is reset, so that code which calls \cs{@caption}
+%    directly (without \cs{caption}) gets a normal caption.
+%    \begin{macrocode}
+  \@captionstarfalse}
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\@caption}{star form, list entry socket}%
+%<latexrelease>\long\def\@caption#1[#2]#3{%
+%<latexrelease>  \par
+%<latexrelease>  \addcontentsline{\csname ext@#1\endcsname}{#1}%
+%<latexrelease>    {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #2}}%
+%<latexrelease>  \begingroup
+%<latexrelease>    \@parboxrestore
+%<latexrelease>    \if@minipage
+%<latexrelease>      \@setminipage
+%<latexrelease>    \fi
+%<latexrelease>    \normalsize
+%<latexrelease>    \@makecaption{\csname fnum@#1\endcsname}{\ignorespaces #3}\par
+%<latexrelease>  \endgroup}
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
 %    \end{macrocode}
 % \end{macro}
 %

@@ -96,8 +96,10 @@
 % move it to the begin of the structure. If a float has two captions the author
 % has to insert a command which splits the float in two.
 %
-% Subfigures and subcaptions are currently not handled, but will be implemented
-% as simple \texttt{Part} with their own \texttt{Caption}.
+% Subfigures and subcaptions are not handled by the kernel. Packages which
+% provide them (e.g., \pkg{subcaption}) can use the tagging sockets
+% \texttt{subfloat/begin} and \texttt{subfloat/end}: they create a
+% \texttt{Part} and a caption inside becomes its first kid.
 %
 % Unknown float types are put into a generic structure when they are encountered in the
 % source. To add support for a new float type the \texttt{float/new} key described below can
@@ -714,10 +716,13 @@
 % \end{plugdecl}
 % \begin{macro}{\@@_float_name:n}
 % \changes{0.81q}{2026-10-03}{Fall back to generic names for unknown float types}
-% The symbolic name for the caption or the label of the current float type.
+% The symbolic name for the caption, the label or a sub-float of the
+% current float type (the argument is \texttt{caption}, \texttt{label} or
+% \texttt{sub}).
 % Unknown float types (not declared with \cs{DeclareTaggingFloatType}) get a
-% \texttt{float/generic} structure in \cs{@@_float_begin:}, so their caption
-% and label use \texttt{float/generic/caption} and \texttt{float/generic/label}.
+% \texttt{float/generic} structure in \cs{@@_float_begin:}, so their caption,
+% label and sub-floats use \texttt{float/generic/caption},
+% \texttt{float/generic/label} and \texttt{float/generic/sub}.
 % Before, \cs{UseStructureName} gave an undefined control sequence here.
 %    \begin{macrocode}
 \cs_new:Npn \@@_float_name:n #1
@@ -786,36 +791,84 @@
 %    \end{macrocode}
 % \end{plugdecl}
 %
-% \subsubsection{Redefinitions}
+% \begin{plugdecl}{nolabel (tagsupport/caption/label/begin)}
+% \begin{plugdecl}{nolabel (tagsupport/caption/label/end)}
+% \changes{0.81q}{2026-10-05}{Plugs \texttt{nolabel} for \cs{caption*}}
+% For a caption without a label (\cs{caption*}): no \texttt{Lbl} structure,
+% but the paragraph is handled as with a label. The paragraph is started
+% without para tagging, so that the following \texttt{para/begin} socket
+% starts the only \texttt{P} (with the plugs \plug{noop} the paragraph would
+% be started by the caption text after \texttt{para/begin}, which gave a
+% second \texttt{P} and unbalanced para hooks).
+%    \begin{macrocode}
+\NewTaggingSocketPlug{caption/label/begin}{nolabel}
+  {
+    \tagpdfparaOff
+  }
+\NewTaggingSocketPlug{caption/label/end}{nolabel}
+  {
+    \leavevmode
+    \tagpdfparaOn
+  }
+%    \end{macrocode}
+% \end{plugdecl}
+% \end{plugdecl}
 %
-% With hyperref that means that the \cs{refstepcounter} now can affect spacing so we
-% change that to the kernel refstepcounter:
-%    \begin{macrocode}
-\def\caption{%
-   \ifx\@captype\@undefined
-     \@latex@error{\noexpand\caption\c_space_tl outside~float}\@ehd
-     \expandafter\@gobble
-   \else
-%    \end{macrocode}
-% if a caption is used outside a float no
-% target has been set and \cs{@current@float@struct} is empty
-%    \begin{macrocode}
-     \tl_if_empty:NTF\@current@float@struct
-      {
-        \refstepcounter\@captype
-      }
-      {
-        \@kernel@refstepcounter\@captype
-%    \end{macrocode}
-% we need to reset the target for \cs{addcontentsline}.
+% \subsubsection{Stepping the counter}
+%
+% With hyperref the \cs{refstepcounter} now can affect spacing so we
+% change that to the kernel refstepcounter. The kernel \cs{caption}
+% steps the counter through the socket \texttt{caption/step},
+% so we only need a plug and no longer redefine \cs{caption}.
+% It is a normal socket and not a tagging socket, because the float
+% target is also used if tagging is not active.
+% \changes{0.81q}{2026-10-03}{Use the kernel socket \texttt{caption/step}
+%   instead of redefining \cs{caption}}
+% \begin{plugdecl}{latex-lab (caption/step)}
+% If a caption is used outside a float no
+% target has been set and \cs{@current@float@struct} is empty. Inside
+% a sub-float the structure number is that of the sub-float, which has no
+% target, so there we use the normal \cs{refstepcounter} too.
+% Otherwise we need to reset the target for \cs{addcontentsline}.
 % We use \cs{@captype} to support autoref.
 %    \begin{macrocode}
-        \xdef\@currentHref{\@captype.struct.\@current@float@struct}%
+\bool_new:N \l_@@_subfloat_bool
+\NewSocketPlug{caption/step}{latex-lab}
+  {
+    \bool_lazy_or:nnTF
+      { \tl_if_empty_p:N \@current@float@struct }
+      { \l_@@_subfloat_bool }
+      { \refstepcounter {#1} }
+      {
+        \@kernel@refstepcounter {#1}
+        \xdef\@currentHref{\@captype.struct.\@current@float@struct}
       }
-     \expandafter\@firstofone
-   \fi
-   {\@dblarg{\@caption\@captype}}%
-}
+  }
+\AssignSocketPlug{caption/step}{latex-lab}
+%    \end{macrocode}
+% \end{plugdecl}
+%
+% \subsubsection{Sub-floats}
+% \changes{0.81q}{2026-10-03}{Plugs for the sockets \texttt{subfloat/begin}
+%   and \texttt{subfloat/end}}
+% A sub-float (a sub-figure etc.\ with its own caption) gets the structure
+% \texttt{float/\meta{type}/sub} (role \texttt{Part}), or
+% \texttt{float/generic/sub} for unknown float types.
+% Its structure number is stored in \cs{@current@float@struct}, so that
+% the caption of the sub-float becomes its first kid.
+%    \begin{macrocode}
+\NewTaggingSocketPlug{subfloat/begin}{default}
+  {
+    \tag_struct_begin:n{tag=\UseStructureName{\@@_float_name:n{sub}}}
+    \tl_set:Ne\@current@float@struct{\tag_get:n{struct_num}}
+    \bool_set_true:N \l_@@_subfloat_bool
+  }
+\AssignTaggingSocketPlug{subfloat/begin}{default}
+\NewTaggingSocketPlug{subfloat/end}{default}
+  {
+    \tag_struct_end:
+  }
+\AssignTaggingSocketPlug{subfloat/end}{default}
 %    \end{macrocode}
 %
 % \begin{macro}{\@makecaption}
@@ -829,6 +882,20 @@
     \long\def\@makecaption#1#2{%
       \UseHookWithArguments{cmd/@makecaption/before}{2}{#1}{#2}%
       \vskip\abovecaptionskip
+%    \end{macrocode}
+% \cs{caption*} has no label (the first argument is empty), so the label
+% sockets are disabled locally, and the label tagging sockets get the plugs
+% \plug{nolabel}.
+% \changes{0.81q}{2026-10-03}{Support for \cs{caption*}}
+% \changes{0.81q}{2026-10-05}{Use the plugs \texttt{nolabel}: \cs{caption*} gave
+%   unbalanced para hooks if the caption was wider than the line}
+%    \begin{macrocode}
+      \legacy_if:nT { @captionstar }
+        {
+          \AssignSocketPlug{caption/label}{noop}
+          \AssignTaggingSocketPlug{caption/label/begin}{nolabel}
+          \AssignTaggingSocketPlug{caption/label/end}{nolabel}
+        }
 %    \end{macrocode}
 % We don't want tagging when storing the caption for the singleline check.
 % \changes{0.81l}{2025-10-17}{Measure \texttt{caption/label} socket instead of hard-coded colon and space, tagging issue 935}

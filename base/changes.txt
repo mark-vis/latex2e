@@ -16,6 +16,16 @@ not part of the distribution.
 	Add \DeclareTaggingFloatType; the list of float types for tagging
 	moves here from latex-lab-float
 
+	* ltfloat.dtx:
+	Add \caption* and the sockets caption/step and caption/listentry
+
+	* lttagging.dtx:
+	Add tagging sockets subfloat/begin and subfloat/end;
+	\DeclareTaggingFloatType also declares float/<type>/sub
+
+	* classes.dtx:
+	No label separator in \@makecaption if the label is empty
+
 2026-10-01 Joseph Wright  <Joseph.Wright@latex-project.org>
 
 	* ltfloats.dtx:
