@@ -21,7 +21,9 @@ not part of the distribution.
 
 	* lttagging.dtx:
 	Add tagging sockets subfloat/begin and subfloat/end;
-	\DeclareTaggingFloatType also declares float/<type>/sub
+	\DeclareTaggingFloatType also declares float/<type>/sub.
+	Document that caption/label/begin and caption/label/end can be used
+	inside the caption paragraph
 
 	* classes.dtx:
 	No label separator in \@makecaption if the label is empty

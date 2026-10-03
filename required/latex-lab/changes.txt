@@ -1,3 +1,11 @@
+2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
+
+	* latex-lab-float.dtx:
+	The label tagging sockets are taken to be inside the caption
+	paragraph only if \@makecaption has not said that it uses them
+	before the paragraph (a caption in threeparttable, which is inside
+	another paragraph, gave unbalanced para hooks)
+
 2026-10-03  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
 
 	* latex-lab-float.dtx:
@@ -15,6 +23,16 @@
 
 	* latex-lab-namespace.dtx:
 	Structure names float/<type>/sub for sub-floats
+
+	* latex-lab-float.dtx:
+	Document the contract of the caption/label socket, add socket
+	caption/separator and plugs label-only and colon, allow the label
+	tagging sockets inside a paragraph, document the label
+	latex-lab-testphase-float of the begindocument redefinition of
+	\@makecaption (classes remove it by this label)
+
+	* latex-lab-listings.dtx:
+	Void the socket caption/separator for titles
 
 2026-10-02  Frank Mittelbach  <Frank.Mittelbach@latex-project.org>
 

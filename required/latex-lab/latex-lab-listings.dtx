@@ -9,8 +9,8 @@
 %
 %    https://www.latex-project.org/lppl.txt
 %
-\def\ltlablistingsdate{2026-09-21}
-\def\ltlablistingsversion{0.80a}
+\def\ltlablistingsdate{2026-10-03}
+\def\ltlablistingsversion{0.80b}
 
 %<*driver>
 \DocumentMetadata{tagging=on,pdfstandard=ua-2}
@@ -198,14 +198,16 @@
 \def\lst@makecaption{%
   \AssignStructureRole {para/textblock}{\UseStructureName{span}}\def\@captype{lstlisting}\@makecaption}
 %    \end{macrocode}
-% Titles are captions without labels, so we need to void the socket and we must ensure 
+% Titles are captions without labels, so we need to void the sockets and we must ensure 
 % that the \cs{@captype} is set even if there is no float:
+% \changes{v0.80b}{2026-10-03}{Void the socket \texttt{caption/separator} too}
 %    \begin{macrocode}
 \def\lst@maketitle{\def\@captype{lstlisting}%
  \AssignStructureRole {para/textblock}{\UseStructureName{span}}
  \AssignTaggingSocketPlug{caption/label/begin}{noop}%
  \AssignTaggingSocketPlug{caption/label/end}{noop}%
  \AssignSocketPlug{caption/label}{noop}%
+ \AssignSocketPlug{caption/separator}{noop}%
  \@makecaption\lst@title@dropdelim}
 %    \end{macrocode}
 % If a listings ends with empty lines and the \texttt{showlines} option is false
