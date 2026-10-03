@@ -2,6 +2,11 @@
 
 	* latex-lab-float.dtx:
 	Execute the kernel hook float/begin in \@xfloat
+	Use \DeclareTaggingFloatType in the key float/new; captions in floats
+	of undeclared types use float/generic/caption and float/generic/label
+
+	* latex-lab-namespace.dtx:
+	Add the names float/generic/caption and float/generic/label
 
 2026-10-02  Frank Mittelbach  <Frank.Mittelbach@latex-project.org>
 

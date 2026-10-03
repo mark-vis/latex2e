@@ -12,6 +12,10 @@ not part of the distribution.
 	Add the hooks float/begin and float/end (executed inside the
 	float box by \@xfloat, \@xdblfloat and \@endfloatbox)
 
+	* lttagging.dtx:
+	Add \DeclareTaggingFloatType; the list of float types for tagging
+	moves here from latex-lab-float
+
 2026-10-01 Joseph Wright  <Joseph.Wright@latex-project.org>
 
 	* ltfloats.dtx:

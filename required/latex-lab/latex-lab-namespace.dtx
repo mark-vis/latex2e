@@ -12,8 +12,8 @@
 %    https://www.latex-project.org/lppl.txt
 %
 %<*package>
-\def\ltlabnamesdate{2026-09-27}
-\def\ltlabnamesversion{0.8r}
+\def\ltlabnamesdate{2026-10-03}
+\def\ltlabnamesversion{0.8s}
 %</package>
 %<*driver>
 \DocumentMetadata{tagging=on,pdfstandard=ua-2}
@@ -618,6 +618,13 @@ subparagraph-heading,  H6,pdf2,
 %    \begin{macrocode}
 \NewStructureName{float/generic}
 \AssignStructureRole{float/generic}{float}
+%    \end{macrocode}
+% \changes{v0.8s}{2026-10-03}{Names for captions in floats of unknown type}
+%    \begin{macrocode}
+\NewStructureName{float/generic/caption}
+\AssignStructureRole{float/generic/caption}{Caption}
+\NewStructureName{float/generic/label}
+\AssignStructureRole{float/generic/label}{Lbl}
 \NewStructureName{float/figures}
 \AssignStructureRole{float/figures}{figures}
 \NewStructureName{float/tables}

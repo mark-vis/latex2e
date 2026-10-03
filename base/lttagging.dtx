@@ -33,7 +33,7 @@
 %<*driver>
 % \fi
 \ProvidesFile{lttagging.dtx}
-             [2026-08-19 v1.1a LaTeX Kernel (tagging support)]
+             [2026-10-03 v1.1b LaTeX Kernel (tagging support)]
 % \iffalse
 \documentclass{l3in2edoc}
 \GetFileInfo{lttagging.dtx}
@@ -1288,6 +1288,64 @@
  {
    \tl_set:cn { l_@@_name_#1_tl }{#2}
  }
+\ExplSyntaxOff
+%    \end{macrocode}
+% \end{macro}
+%
+% \subsection{Float types}
+% \begin{variable}{\g_@@_float_types_seq}
+% \changes{v1.1b}{2026/10/03}{Variable moved here from latex-lab-float}
+%    The float types known to the tagging code. The float code
+%    (\pkg{latex-lab-float}) creates a container structure for each of
+%    them and uses the structure names \texttt{float/\meta{type}s},
+%    \texttt{float/\meta{type}}, \texttt{float/\meta{type}/caption} and
+%    \texttt{float/\meta{type}/label}. The names for \texttt{figure}
+%    and \texttt{table} are declared in \pkg{latex-lab-namespace}.
+%    \begin{macrocode}
+\ExplSyntaxOn
+\seq_new:N \g_@@_float_types_seq
+\seq_gput_right:Nn \g_@@_float_types_seq {figure}
+\seq_gput_right:Nn \g_@@_float_types_seq {table}
+%    \end{macrocode}
+% \end{variable}
+%
+% \begin{macro}{\DeclareTaggingFloatType}
+% \changes{v1.1b}{2026/10/03}{Command added}
+%    \cs{DeclareTaggingFloatType}\Arg{type} declares a new float type for
+%    tagging. \meta{type} is the value that \cs{@captype} has inside the
+%    float, the argument of \cs{@float}. Packages and classes that define
+%    float environments (\pkg{newfloat}, \pkg{float}, \pkg{tocbasic},
+%    \pkg{memoir}, \ldots) should use it for each new type. It can be used
+%    whether or not tagging is active, and more than once for the same
+%    type: a structure name that already has a role is not changed.
+%
+%    It should be used in the preamble, outside of a group. The type is
+%    recorded globally, but, as with \cs{NewStructureName} and
+%    \cs{AssignStructureRole}, the roles are assigned locally; after a
+%    group they are empty. Declaring the type again outside of the group
+%    assigns them again. Afterwards the roles of the four structure names
+%    can be changed with \cs{AssignStructureRole}.
+%    \begin{macrocode}
+\cs_new_protected:Npn \DeclareTaggingFloatType #1
+  {
+    \seq_if_in:NnF \g_@@_float_types_seq {#1}
+      { \seq_gput_right:Nn \g_@@_float_types_seq {#1} }
+    \@@_float_type_name:nn {float/#1s}         {Sect}
+    \@@_float_type_name:nn {float/#1}          {float}
+    \@@_float_type_name:nn {float/#1/caption}  {Caption}
+    \@@_float_type_name:nn {float/#1/label}    {Lbl}
+  }
+%    \end{macrocode}
+%    A name is created if it does not exist, and gets its default role if
+%    it has none (also when it was created inside a group that has ended).
+%    \begin{macrocode}
+\cs_new_protected:Npn \@@_float_type_name:nn #1#2
+  {
+    \tl_if_exist:cF { l_@@_name_#1_tl }
+      { \NewStructureName {#1} \tl_clear:c { l_@@_name_#1_tl } }
+    \tl_if_empty:cT { l_@@_name_#1_tl }
+      { \AssignStructureRole {#1} {#2} }
+  }
 \ExplSyntaxOff
 %    \end{macrocode}
 % \end{macro}
