@@ -15,8 +15,8 @@
 %
 %    https://github.com/latex3/latex2e/issues
 %
-\def\ltlabfloatdate{2026-09-09}
-\def\ltlabfloatversion{0.81p}
+\def\ltlabfloatdate{2026-10-03}
+\def\ltlabfloatversion{0.81q}
 %<*driver>
 \DocumentMetadata{tagging=on,pdfstandard=ua-2}
 \documentclass{l3in2edoc}
@@ -631,6 +631,14 @@
 % We add a target for links. TODO: check that it doesn't affect spacing!!
 %    \begin{macrocode}
         \MakeLinkTarget*{\@captype.struct.\@current@float@struct}%
+%    \end{macrocode}
+% \changes{0.81q}{2026-10-03}{Execute the kernel hook \hook{float/begin}}
+% Then the kernel hook \hook{float/begin}, so that code in the hook
+% is inside the float structure and after the link target.
+% (\cs{@endfloatbox} executes \hook{float/end}, so \cs{end@float}
+% needs no change for it.)
+%    \begin{macrocode}
+        \@float@begin@hook{#1}%
 }%
 %    \end{macrocode}
 %  The end code of the float ...
