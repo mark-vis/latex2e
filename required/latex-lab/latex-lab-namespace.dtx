@@ -642,6 +642,16 @@ subparagraph-heading,  H6,pdf2,
 \NewStructureName{float/table/label}
 \AssignStructureRole{float/table/label}{Lbl}
 %    \end{macrocode}
+% Sub-floats (sub-figures etc.\ with their own caption).
+% \changes{v0.8s}{2026-10-06}{Names for sub-floats added}
+%    \begin{macrocode}
+\NewStructureName{float/generic/sub}
+\AssignStructureRole{float/generic/sub}{Part}
+\NewStructureName{float/figure/sub}
+\AssignStructureRole{float/figure/sub}{Part}
+\NewStructureName{float/table/sub}
+\AssignStructureRole{float/table/sub}{Part}
+%    \end{macrocode}
 %
 % \subsubsection{Footnotes}
 %

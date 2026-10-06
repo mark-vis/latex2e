@@ -1,6 +1,18 @@
 2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
 
 	* latex-lab-float.dtx:
+	Plugs for the tagging sockets subfloat/box, subfloat/begin and
+	subfloat/end: a sub-float becomes a Part (instead of the Div of its
+	minipage or parbox) with its caption as first kid, and its caption
+	gets a target of its own (\@floatHref@<type> is empty in it)
+
+	* latex-lab-namespace.dtx:
+	Structure names float/<type>/sub for sub-floats
+
+	* latex-lab-minipage.dtx:
+	Comment on the subfloat plugs of minipage/before and parbox/before
+
+	* latex-lab-float.dtx:
 	Document the contract of the caption/label socket, add socket
 	caption/separator and plugs label-only and colon (no separator for
 	\caption*); allow the label tagging sockets inside the caption

@@ -96,8 +96,13 @@
 % move it to the begin of the structure. If a float has two captions the author
 % has to insert a command which splits the float in two.
 %
-% Subfigures and subcaptions are currently not handled, but will be implemented
-% as simple \texttt{Part} with their own \texttt{Caption}.
+% Subfigures and subcaptions are not handled by the kernel. Packages which
+% provide them (e.g., \pkg{subcaption}) can use the tagging socket
+% \texttt{subfloat/box} directly before the \env{minipage} or \cs{parbox} of
+% the sub-float (or the sockets \texttt{subfloat/begin} and
+% \texttt{subfloat/end} for sub-floats that are not a single box): the box
+% then becomes a \texttt{Part} (instead of a \texttt{Div}), and a caption
+% inside becomes its first kid.
 %
 % Unknown float types are put into a generic structure when they are encountered in the
 % source. To add support for a new float type the \texttt{float/new} key described below can
@@ -186,8 +191,9 @@
 % it holds the link target of the current float of type \meta{type}. The code
 % sets it locally inside the float box, right after the target is made:
 % to \meta{type}\texttt{.struct.}\meta{n} at the start of the float and to
-% \texttt{floatstructure.}\meta{n} after \texttt{float/split}. The kernel
-% never sets it; the default plug of the
+% \texttt{floatstructure.}\meta{n} after \texttt{float/split}. Sub-floats set it
+% to empty locally (see the tagging sockets \texttt{subfloat/box} and
+% \texttt{subfloat/begin}). The kernel never sets it; the default plug of the
 % socket \texttt{caption/step} uses it as the target of the caption. As the name
 % contains the type, a \texttt{table} caption inside a \texttt{figure} and the step
 % of a sub-caption counter (e.g., \texttt{subfigure}) do not use the target of the
@@ -782,10 +788,13 @@
 % \end{plugdecl}
 % \begin{macro}{\@@_float_name:n}
 % \changes{0.81q}{2026-10-06}{Fall back to generic names for unknown float types}
-% The symbolic name for the caption or the label of the current float type.
+% The symbolic name for the caption, the label or a sub-float of the
+% current float type (the argument is \texttt{caption}, \texttt{label} or
+% \texttt{sub}).
 % Unknown float types (not declared with \cs{DeclareTaggingFloatType}) get a
-% \texttt{float/generic} structure in \cs{@@_float_begin:}, so their caption
-% and label use \texttt{float/generic/caption} and \texttt{float/generic/label}.
+% \texttt{float/generic} structure in \cs{@@_float_begin:}, so their caption,
+% label and sub-floats use \texttt{float/generic/caption},
+% \texttt{float/generic/label} and \texttt{float/generic/sub}.
 % Before, \cs{UseStructureName} gave an undefined control sequence here.
 % \changes{0.81q}{2026-10-06}{Generic names also if \cs{@captype} is undefined}
 % The generic names are also used if \cs{@captype} is undefined, e.g., for
@@ -947,8 +956,229 @@
 % begin of the float. The default plug of the kernel socket \texttt{caption/step}
 % uses \cs{@floatHref@}\meta{type}, which we set at the start of the float and in
 % \texttt{float/split}, so neither a plug nor a redefinition of \cs{caption} is
-% needed. Outside of floats the name is undefined,
+% needed. Outside of floats and in sub-floats the name is undefined or empty,
 % and the caption makes its own target as with \cs{refstepcounter}.
+%
+% \subsubsection{Sub-floats}
+% \changes{0.81q}{2026-10-06}{Plugs for the sockets \texttt{subfloat/box},
+%   \texttt{subfloat/begin} and \texttt{subfloat/end}}
+% A sub-float (a sub-figure etc.\ with its own caption) gets the structure
+% \texttt{float/\meta{type}/sub} (role \texttt{Part}), or
+% \texttt{float/generic/sub} for unknown float types.
+% \begin{macro}{\@@_subfloat_start:}
+% Its structure number is stored in \cs{@current@float@struct}, so that
+% the caption of the sub-float becomes its first kid. The float target is
+% set to empty, so that the caption of the sub-float makes a target of its own.
+%    \begin{macrocode}
+\cs_new_protected:Npn \@@_subfloat_start:
+  {
+    \tag_struct_begin:n{tag=\UseStructureName{\@@_float_name:n{sub}}}
+    \tl_set:Ne \@current@float@struct {\tag_get:n{struct_num}}
+    \cs_if_exist:NT \@captype
+      { \cs_set_eq:cN { @floatHref@ \@captype } \c_empty_tl }
+  }
+%    \end{macrocode}
+% \end{macro}
+% \begin{plugdecl}{default (tagsupport/subfloat/begin)}
+% \begin{plugdecl}{default (tagsupport/subfloat/end)}
+%    \begin{macrocode}
+\NewTaggingSocketPlug{subfloat/begin}{default}
+  {
+    \@@_subfloat_start:
+  }
+\AssignTaggingSocketPlug{subfloat/begin}{default}
+\NewTaggingSocketPlug{subfloat/end}{default}
+  {
+    \tag_struct_end:
+  }
+\AssignTaggingSocketPlug{subfloat/end}{default}
+%    \end{macrocode}
+% \end{plugdecl}
+% \end{plugdecl}
+%
+% \begin{variable}{\l_@@_subfloat_mp_tl,\l_@@_subfloat_pb_tl}
+% \begin{macro}{\@@_subfloat_restore:}
+% The plugs of the sockets \texttt{minipage/before} and \texttt{parbox/before}
+% that were assigned before \texttt{subfloat/box} was used. They are
+% restored by the boxes (see below), so that boxes nested in the sub-float
+% are normal.
+%    \begin{macrocode}
+\tl_new:N \l_@@_subfloat_mp_tl
+\tl_new:N \l_@@_subfloat_pb_tl
+\cs_new_protected:Npn \@@_subfloat_restore:
+  {
+    \exp_args:NnV \AssignTaggingSocketPlug {minipage/before} \l_@@_subfloat_mp_tl
+    \exp_args:NnV \AssignTaggingSocketPlug {parbox/before}   \l_@@_subfloat_pb_tl
+  }
+%    \end{macrocode}
+% \end{macro}
+% \end{variable}
+%
+% \begin{variable}{\l_@@_subfloat_struct_tl,\l_@@_subfloat_href_tl,
+%                  \l_@@_subfloat_hrefname_tl,\l_@@_subfloat_level_tl,
+%                  \l_@@_subfloat_pa_tl}
+% \begin{macro}{\@@_subfloat_save:}
+% The plug of \texttt{parbox/before} is used at the group level of the caller
+% of \cs{parbox}, outside of the box, so the settings of
+% \cs{@@_subfloat_start:} would last after the box until the end of the
+% caller's group (in practice the float), and a later \cs{caption} of the float
+% would become a kid of the sub-float and make its own target. So for a
+% \cs{parbox}, \cs{@@_subfloat_save:} stores the meanings of
+% \cs{@current@float@struct} and \cs{@floatHref@}\meta{type} (they can be
+% undefined), the name of the latter, the group level, and the plug of
+% \texttt{parbox/after}, and assigns (locally) the plug \plug{subfloat} to
+% \texttt{parbox/after}, which restores them after the box. (A \env{minipage}
+% does not need this: its plug runs inside the group of the environment.)
+%    \begin{macrocode}
+\tl_new:N \l_@@_subfloat_hrefname_tl
+\tl_new:N \l_@@_subfloat_level_tl
+\tl_new:N \l_@@_subfloat_pa_tl
+\cs_new_protected:Npn \@@_subfloat_save:
+  {
+    \cs_set_eq:NN \l_@@_subfloat_struct_tl \@current@float@struct
+    \tl_set:Ne \l_@@_subfloat_hrefname_tl
+      { \cs_if_exist:NT \@captype { @floatHref@ \@captype } }
+    \tl_if_empty:NF \l_@@_subfloat_hrefname_tl
+      { \cs_set_eq:Nc \l_@@_subfloat_href_tl { \l_@@_subfloat_hrefname_tl } }
+    \tl_set:Ne \l_@@_subfloat_level_tl { \int_use:N \tex_currentgrouplevel:D }
+    \bool_if:nF
+      { \socket_if_plug_assigned_p:nn {tagsupport/parbox/after} {subfloat} }
+      {
+        \socket_get_plug:nN {tagsupport/parbox/after} \l_@@_subfloat_pa_tl
+        \AssignTaggingSocketPlug{parbox/after}{subfloat}
+      }
+  }
+%    \end{macrocode}
+% \end{macro}
+% \end{variable}
+%
+% \begin{plugdecl}{subfloat (tagsupport/parbox/after)}
+% The plug restores the previous plug of \texttt{parbox/after} (locally) and
+% uses it, so the structure is closed as for a normal box. If it is used at the
+% group level of \cs{@@_subfloat_save:}, it is the end of the sub-float, and
+% the saved meanings are restored. At a deeper level it is the end of a box
+% inside the sub-float, which inherited the plug: then the restored plug is
+% only valid inside the sub-float, and nothing else is done.
+%    \begin{macrocode}
+\NewTaggingSocketPlug{parbox/after}{subfloat}
+  {
+    \exp_args:NnV \AssignTaggingSocketPlug {parbox/after} \l_@@_subfloat_pa_tl
+    \UseTaggingSocket{parbox/after}
+    \int_compare:nNnT
+      { \tex_currentgrouplevel:D } = { \l_@@_subfloat_level_tl }
+      {
+        \cs_set_eq:NN \@current@float@struct \l_@@_subfloat_struct_tl
+        \tl_if_empty:NF \l_@@_subfloat_hrefname_tl
+          {
+            \cs_set_eq:cN { \l_@@_subfloat_hrefname_tl }
+              \l_@@_subfloat_href_tl
+          }
+      }
+  }
+%    \end{macrocode}
+% \end{plugdecl}
+%
+% \begin{variable}{\g_@@_subfloat_tl,\l_@@_subfloat_tl}
+% \begin{macro}[TF]{\@@_subfloat_if_first:}
+% Every use of \texttt{subfloat/box} takes a new number (globally) and keeps
+% it locally; the first box after it uses the number up (globally, as the box
+% may be inside a group that ends before the next box). So only that box
+% becomes the sub-float, also if the plugs \plug{subfloat} are still assigned
+% after it: a \env{minipage} restores the previous plugs only inside its own
+% group, so without the test a second \env{minipage} in the same group would
+% become a sub-float as well. (Token lists and not integers, so that no
+% register is allocated.)
+%    \begin{macrocode}
+\tl_new:N \g_@@_subfloat_tl
+\tl_gset:Nn \g_@@_subfloat_tl { 0 }
+\tl_new:N \l_@@_subfloat_tl
+\prg_new_protected_conditional:Npnn \@@_subfloat_if_first: { TF }
+  {
+    \cs_if_exist:cTF { @@_subfloat_used_ \l_@@_subfloat_tl : }
+      { \prg_return_false: }
+      {
+        \cs_gset_eq:cN { @@_subfloat_used_ \l_@@_subfloat_tl : }
+          \prg_do_nothing:
+        \prg_return_true:
+      }
+  }
+%    \end{macrocode}
+% \end{macro}
+% \end{variable}
+%
+% \begin{plugdecl}{default (tagsupport/subfloat/box)}
+% The sub-float is the structure of the next \env{minipage} or \cs{parbox}:
+% the plug assigns (locally) the plugs \plug{subfloat} to the sockets
+% \texttt{minipage/before} and \texttt{parbox/before} and takes a new number
+% for that box. Their counterparts
+% \texttt{minipage/after} and \texttt{parbox/after} close the structure as for
+% a normal box. If \plug{subfloat} is already assigned (the socket was used
+% before in the same group), only the number is new. Nothing is done if the
+% plug of \texttt{minipage/after} is \plug{noop} (the tagging code of
+% \pkg{latex-lab-minipage} is not active, so the structure would not be
+% closed).
+%    \begin{macrocode}
+\NewTaggingSocketPlug{subfloat/box}{default}
+  {
+    \bool_if:nF
+      { \socket_if_plug_assigned_p:nn {tagsupport/minipage/after} {noop} }
+      {
+        \bool_if:nF
+          { \socket_if_plug_assigned_p:nn {tagsupport/minipage/before} {subfloat} }
+          {
+            \socket_get_plug:nN {tagsupport/minipage/before} \l_@@_subfloat_mp_tl
+            \socket_get_plug:nN {tagsupport/parbox/before}   \l_@@_subfloat_pb_tl
+            \AssignTaggingSocketPlug{minipage/before}{subfloat}
+            \AssignTaggingSocketPlug{parbox/before}{subfloat}
+          }
+        \tl_gset:Ne \g_@@_subfloat_tl { \int_eval:n { \g_@@_subfloat_tl + 1 } }
+        \tl_set_eq:NN \l_@@_subfloat_tl \g_@@_subfloat_tl
+      }
+  }
+\AssignTaggingSocketPlug{subfloat/box}{default}
+%    \end{macrocode}
+% \end{plugdecl}
+%
+% \begin{plugdecl}{subfloat (tagsupport/minipage/before)}
+% \begin{plugdecl}{subfloat (tagsupport/parbox/before)}
+% These plugs restore the previous plugs (locally, at the level of the box).
+% If the number of \texttt{subfloat/box} has not been used yet, they then
+% start the structure of the sub-float instead of the \texttt{Div} of the box.
+% The first two lines (closing the open text-unit and pushing the marked
+% content) must stay identical to the \plug{kernel} plugs of these sockets in
+% \pkg{latex-lab-minipage}. Otherwise (a later box in the same group) they use
+% the restored plug, so the box is normal. For a \cs{parbox} the restore is
+% done at the level of the caller, so later boxes have the previous plugs
+% anyway, and \cs{@@_subfloat_save:} makes sure that the settings of the
+% sub-float end with the box; for a \env{minipage} it is done inside the group
+% of the environment, and the test of the number makes the later boxes normal.
+%    \begin{macrocode}
+\NewTaggingSocketPlug{minipage/before}{subfloat}
+  {
+    \@@_subfloat_restore:
+    \@@_subfloat_if_first:TF
+      {
+        \tag_mc_end_push:
+        \bool_if:NT \l__tag_para_bool {\tag_struct_end:}
+        \@@_subfloat_start:
+      }
+      { \UseTaggingSocket{minipage/before} }
+  }
+\NewTaggingSocketPlug{parbox/before}{subfloat}
+  {
+    \@@_subfloat_restore:
+    \@@_subfloat_if_first:TF
+      {
+        \tag_mc_end_push:
+        \bool_if:NT \l__tag_para_bool {\tag_struct_end:}
+        \@@_subfloat_save:
+        \@@_subfloat_start:
+      }
+      { \UseTaggingSocket{parbox/before} }
+  }
+%    \end{macrocode}
+% \end{plugdecl}
+% \end{plugdecl}
 %
 % \begin{macro}{\@makecaption}
 % \cs{@makecaption} is defined by the classes so we overwrite it for now

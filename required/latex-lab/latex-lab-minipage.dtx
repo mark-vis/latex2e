@@ -204,7 +204,9 @@
   {
 %    \end{macrocode}
 % As there was a \cs{leavevmode} before that is a P/text open that we have to close
-% if para tagging is active:
+% if para tagging is active (the plugs \plug{subfloat} of the sockets
+% \texttt{minipage/before} and \texttt{parbox/before} in \pkg{latex-lab-float}
+% repeat these two lines, keep them identical):
 %    \begin{macrocode}
     \tag_mc_end_push:
     \bool_if:NT \l__tag_para_bool {\tag_struct_end:}

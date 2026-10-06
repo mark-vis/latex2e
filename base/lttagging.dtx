@@ -1012,6 +1012,53 @@
 %    \end{macrocode}
 % \end{taggingsocketdecl}
 %
+% \begin{taggingsocketdecl}{subfloat/box}
+% \changes{v1.1b}{2026-10-06}{Sockets \texttt{subfloat/box},
+%    \texttt{subfloat/begin} and \texttt{subfloat/end} for sub-floats added}
+%  This socket is meant for packages which build sub-figures,
+%  sub-tables, etc.\ inside a float (e.g., \pkg{subcaption}) as a
+%  single \env{minipage} or \cs{parbox}. It says ``the next
+%  \env{minipage} or \cs{parbox} is a sub-float'': that box then gets
+%  the structure of the sub-float (\texttt{float/\meta{type}/sub}, role
+%  \texttt{Part}) \emph{instead of} its own structure, and a caption
+%  inside the box becomes its first kid. Its begin plug also sets
+%  \cs{@current@float@struct} (locally) to the number of this structure
+%  and the float target \cs{@floatHref@}\meta{type} to empty.
+%
+%  The socket has no arguments; the float type is \cs{@captype}. It
+%  should be used directly before the box (for example at the start of
+%  the sub-float environment): it is not checked what comes between, the
+%  next \env{minipage} or \cs{parbox} in the current group becomes the
+%  sub-float (outside a float with the structure
+%  \texttt{float/generic/sub}). It acts only once: boxes nested inside
+%  the sub-float, and later boxes, also in the same group, are normal.
+%  The settings of \cs{@current@float@struct} and
+%  \cs{@floatHref@}\meta{type} end with the box, so a caption after it
+%  belongs to the float again; no group is needed. Sub-floats can be
+%  nested. Without tagging (or if the tagging code for
+%  \env{minipage} and \cs{parbox} is not active) it does nothing.
+%    \begin{macrocode}
+\NewTaggingSocket{subfloat/box}{0}
+%    \end{macrocode}
+% \end{taggingsocketdecl}
+%
+% \begin{taggingsocketdecl}{subfloat/begin,
+%                    subfloat/end}
+%  These sockets are meant for sub-floats that are not a single
+%  \env{minipage} or \cs{parbox} (otherwise see \texttt{subfloat/box}).
+%  They open and close the structure of the sub-float. The begin socket
+%  should also set \cs{@current@float@struct} (locally) to the number
+%  of this structure, so that a caption inside the sub-float uses it
+%  as parent, and the float target \cs{@floatHref@}\meta{type} to empty,
+%  so that the sub-caption gets a target of its own.
+%  They have no arguments; the float type is \cs{@captype}.
+%  They should be used in vertical mode, inside the box of the sub-float.
+%    \begin{macrocode}
+\NewTaggingSocket{subfloat/begin}{0}
+\NewTaggingSocket{subfloat/end}{0}
+%    \end{macrocode}
+% \end{taggingsocketdecl}
+%
 %
 % \subsection{Tagging support for output routines}
 %
@@ -1306,8 +1353,10 @@
 %    The float types known to the tagging code. The float code
 %    (\pkg{latex-lab-float}) creates a container structure for each of
 %    them and uses the structure names \texttt{float/\meta{type}s},
-%    \texttt{float/\meta{type}}, \texttt{float/\meta{type}/caption} and
-%    \texttt{float/\meta{type}/label}. The names for \texttt{figure}
+%    \texttt{float/\meta{type}}, \texttt{float/\meta{type}/caption},
+%    \texttt{float/\meta{type}/label} and \texttt{float/\meta{type}/sub}
+%    (for sub-floats, used by the sockets \texttt{subfloat/box} and
+%    \texttt{subfloat/begin}). The names for \texttt{figure}
 %    and \texttt{table} are declared in \pkg{latex-lab-namespace}.
 %    \begin{macrocode}
 \ExplSyntaxOn
@@ -1331,7 +1380,7 @@
 %    recorded globally, but, as with \cs{NewStructureName} and
 %    \cs{AssignStructureRole}, the roles are assigned locally; after a
 %    group they are empty. Declaring the type again outside of the group
-%    assigns them again. Afterwards the roles of the four structure names
+%    assigns them again. Afterwards the roles of the five structure names
 %    can be changed with \cs{AssignStructureRole}.
 %    \begin{macrocode}
 \cs_new_protected:Npn \DeclareTaggingFloatType #1
@@ -1342,6 +1391,7 @@
     \@@_float_type_name:nn {float/#1}          {float}
     \@@_float_type_name:nn {float/#1/caption}  {Caption}
     \@@_float_type_name:nn {float/#1/label}    {Lbl}
+    \@@_float_type_name:nn {float/#1/sub}      {Part}
   }
 %    \end{macrocode}
 %    A name is created if it does not exist, and gets its default role if
