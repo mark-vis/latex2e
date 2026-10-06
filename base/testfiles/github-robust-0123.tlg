@@ -162,7 +162,7 @@ l. ...\mruntest{ccc}
 ---------------------------------------
 \bibstyle{foo} -> 
 ---------------------------------------
-\caption{foo} -> \GenericError {               }{LaTeX Error: \caption outside float}{See the LaTeX manual or LaTeX Companion for explanation.}{You're in trouble here.  Try typing  <return>  to proceed.\MessageBreak If that doesn't work, type  X <return>  to quit.}{foo}
+\caption{foo} -> \GenericError {               }{LaTeX Error: \caption outside float}{See the LaTeX manual or LaTeX Companion for explanation.}{You're in trouble here.  Try typing  <return>  to proceed.\MessageBreak If that doesn't work, type  X <return>  to quit.}\@caption@skip@star {foo}
 ---------------------------------------
 \documentclass -> \GenericError {               }{LaTeX Error: Can be used only in preamble}{See the LaTeX manual or LaTeX Companion for explanation.}{Your command was ignored.\MessageBreak Type  I <command> <return>  to replace it with another command,\MessageBreak or  <return>  to continue without it.}
 ---------------------------------------
