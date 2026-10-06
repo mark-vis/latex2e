@@ -354,7 +354,8 @@
 %      (also for \cs{caption*} and for direct calls). The arguments are the
 %      type, the star state as above (from \cs{if@captionstar}), the list
 %      text and the caption text. At this point \cs{@currentlabel} is set
-%      and, if the step made a target, \cs{@currentHref} as well. This is
+%      and, if the step made a target, \cs{@currentHref} as well;
+%      \cs{@currentlabelname} is the list text (not for \cs{caption*}). This is
 %      the place for code that today wraps \cs{@caption}, e.g., to make a
 %      target of its own or to record the title of the caption for named
 %      references.
@@ -1220,6 +1221,8 @@
 %      \texttt{caption/listentry}}
 % \changes{v1.2k}{2026-10-06}
 %     {Typesetting with the socket \texttt{caption/typeset}}
+% \changes{v1.2k}{2026-10-06}
+%     {Store the list text in \cs{@currentlabelname}}
 %    \cs{@caption}\marg{type}\oarg{list text}\marg{text} keeps its
 %    signature, so code that wraps or replaces it keeps working.
 %    The typesetting (with \cs{@parboxrestore} and \cs{@makecaption})
@@ -1232,6 +1235,11 @@
 %    already undone by then), so that code which calls \cs{@caption} or
 %    the socket \texttt{caption/step} directly (without \cs{caption}) gets
 %    a normal caption.
+%
+%    For named references, the list text of a caption (not of
+%    \cs{caption*}) is stored in \cs{@currentlabelname}, so that a
+%    \cs{label} after the caption records it as the title (as for
+%    headings), and not the title of the last heading.
 %    \begin{macrocode}
 %</2ekernel>
 %<*2ekernel|latexrelease>
@@ -1251,6 +1259,7 @@
   {#2}{#3}%
   \@kernel@caption@reset}
 \long\def\@caption@body#1#2#3#4{%
+  \IfBooleanF{#2}{\def\@currentlabelname{#3}}%
   \UseHookWithArguments{caption/prepare}{4}{#1}{#2}{#3}{#4}%
   \IfBooleanF{#2}{\UseSocket{caption/listentry}{#1}{#3}{#4}}%
   \UseSocket{caption/typeset}{#1}{#2}{#4}}
