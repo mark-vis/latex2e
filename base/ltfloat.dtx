@@ -31,7 +31,7 @@
 %
 %<*driver>
 % \fi
-\ProvidesFile{ltfloat.dtx}[2026-10-01 v1.2j LaTeX Kernel (Floats)]
+\ProvidesFile{ltfloat.dtx}[2026-10-06 v1.2k LaTeX Kernel (Floats)]
 % \iffalse
 \documentclass{ltxdoc}
 \GetFileInfo{ltfloat.dtx}
@@ -292,6 +292,83 @@
 %    \end{macrocode}
 % \end{macro}
 %
+% \changes{v1.2k}{2026-10-06}{Hooks float/begin and float/end added}
+% \paragraph{The hooks \texttt{float/begin} and \texttt{float/end}.}
+%    Two hooks with two arguments each, for packages that need to
+%    run code at the start and at the end of every float (for example
+%    to set up float-type specific settings or a link target).
+%    \begin{description}
+%    \item[\texttt{float/begin}] is executed by \cs{@xfloat} (for
+%      double-column floats in two-column mode by \cs{@xdblfloat}),
+%      inside the box of the float and the group of the environment,
+%      after \cs{@captype} has been set, \cs{@parboxrestore} and
+%      \cs{@floatboxreset} have been executed and, for double-column
+%      floats, \cs{hsize} and \cs{linewidth} have been set to
+%      \cs{textwidth}.
+%    \item[\texttt{float/end}] is executed by \cs{@endfloatbox}, inside
+%      the box of the float, after the last paragraph has been ended
+%      and before the box is closed.
+%    \end{description}
+%    The first argument is the float type (the value of \cs{@captype}),
+%    the second argument is |*| for a double-column float in two-column
+%    mode, and empty otherwise. The two hooks are a mirrored pair, so
+%    code added to \texttt{float/end} is executed in reverse order.
+%
+%    The hooks are not related to the tagging sockets \texttt{float/begin}
+%    and \texttt{float/end} declared in \texttt{lttagging.dtx}: sockets
+%    and hooks are in different name spaces (the same holds for
+%    \texttt{para/begin}). The sockets start and stop the structure
+%    outside of the float box, the hooks are executed inside it.
+%    \begin{macrocode}
+%</2ekernel>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\@float@begin@hook}{Float hooks}%
+%<*2ekernel|latexrelease>
+\NewMirroredHookPairWithArguments{float/begin}{float/end}{2}
+%    \end{macrocode}
+%
+% \begin{macro}{\@float@usehooks,\@float@begin@hook,\@float@end@hook,
+%                \@float@hook@level}
+% \changes{v1.2k}{2026-10-06}{Macros added}
+%    \cs{@float@usehooks}\marg{type}\marg{star} executes the
+%    \texttt{float/begin} hook and defines \cs{@float@end@hook} (locally,
+%    inside the float box) to execute the \texttt{float/end} hook with the
+%    same arguments. \cs{@endfloatbox} uses \cs{@float@end@hook}, which
+%    is \cs{relax} outside of floats. Some packages use \cs{@endfloatbox}
+%    for boxes that do not start with \cs{@xfloat} (for example
+%    \pkg{float} for |[H]| floats), and such a box can be nested inside
+%    a float, where the local definition is still visible. Therefore the
+%    group level is recorded, and the end hook is executed only by the
+%    \cs{@endfloatbox} at the same group level, that is, the one that
+%    ends the box in which the begin hook was executed.
+%    \cs{@float@begin@hook} is used by \cs{@xfloat}; \cs{@xdblfloat}
+%    disables it and calls \cs{@float@usehooks} itself after the width
+%    has been changed.
+%    \begin{macrocode}
+\def\@float@usehooks#1#2{%
+  \edef\@float@hook@level{\the\currentgrouplevel}%
+  \def\@float@end@hook{%
+    \ifnum\currentgrouplevel=\@float@hook@level\relax
+      \expandafter\@firstofone
+    \else
+      \expandafter\@gobble
+    \fi
+    {\UseHookWithArguments{float/end}{2}{#1}{#2}}}%
+  \UseHookWithArguments{float/begin}{2}{#1}{#2}}
+\def\@float@begin@hook#1{\@float@usehooks{#1}{}}
+\let\@float@end@hook\relax
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\@float@begin@hook}{Float hooks}%
+%<latexrelease>\let\@float@usehooks\@gobbletwo
+%<latexrelease>\let\@float@begin@hook\@gobble
+%<latexrelease>\let\@float@end@hook\relax
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
+%    \end{macrocode}
+% \end{macro}
+%
 % \begin{macro}{\@float}
 % \begin{macro}{\@dblflset}
 % \changes{v1.1a}{1994/10/31}{Macro added}
@@ -370,8 +447,8 @@
 %                  floats in the preamble}
 %    \begin{macrocode}
 %</2ekernel>
-%<latexrelease>\IncludeInRelease{2015/01/01}%
-%<latexrelease>                 {\@xfloat}{Check float options}%
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\@xfloat}{Float hooks}%
 %<*2ekernel|latexrelease>
 \def\@xfloat #1[#2]{%
   \@nodocument
@@ -472,8 +549,80 @@
         \hsize\columnwidth
         \@parboxrestore
         \@floatboxreset
+%    \end{macrocode}
+% \changes{v1.2k}{2026-10-06}{Execute the \texttt{float/begin} hook}
+%    \begin{macrocode}
+        \@float@begin@hook{#1}%
 }%
 %</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{2015/01/01}%
+%<latexrelease>                 {\@xfloat}{Check float options}%
+%<latexrelease>\def\@xfloat #1[#2]{%
+%<latexrelease>  \@nodocument
+%<latexrelease>  \def \@captype {#1}%
+%<latexrelease>   \def \@fps {#2}%
+%<latexrelease>   \@onelevel@sanitize \@fps
+%<latexrelease>   \def \reserved@b {!}%
+%<latexrelease>   \ifx \reserved@b \@fps
+%<latexrelease>     \@fpsadddefault
+%<latexrelease>   \else
+%<latexrelease>     \ifx \@fps \@empty
+%<latexrelease>       \@fpsadddefault
+%<latexrelease>     \fi
+%<latexrelease>   \fi
+%<latexrelease>   \ifhmode
+%<latexrelease>     \@bsphack
+%<latexrelease>     \@floatpenalty -\@Mii
+%<latexrelease>   \else
+%<latexrelease>     \@floatpenalty-\@Miii
+%<latexrelease>   \fi
+%<latexrelease>  \ifinner
+%<latexrelease>     \@parmoderr\@floatpenalty\z@
+%<latexrelease>  \else
+%<latexrelease>    \@next\@currbox\@freelist
+%<latexrelease>      {%
+%<latexrelease>       \@tempcnta \sixt@@n
+%<latexrelease>       \expandafter \@tfor \expandafter \reserved@a
+%<latexrelease>         \expandafter :\expandafter =\@fps
+%<latexrelease>         \do
+%<latexrelease>          {%
+%<latexrelease>           \if \reserved@a h%
+%<latexrelease>             \ifodd \@tempcnta
+%<latexrelease>             \else
+%<latexrelease>               \advance \@tempcnta \@ne
+%<latexrelease>             \fi
+%<latexrelease>           \else\if \reserved@a t%
+%<latexrelease>             \@setfpsbit \tw@
+%<latexrelease>           \else\if \reserved@a b%
+%<latexrelease>             \@setfpsbit 4%
+%<latexrelease>           \else\if \reserved@a p%
+%<latexrelease>             \@setfpsbit 8%
+%<latexrelease>           \else\if \reserved@a !%
+%<latexrelease>             \ifnum \@tempcnta>15
+%<latexrelease>               \advance\@tempcnta -\sixt@@n\relax
+%<latexrelease>             \fi
+%<latexrelease>           \else
+%<latexrelease>             \@latex@error{Unknown float option `\reserved@a'}%
+%<latexrelease>             {Option `\reserved@a' ignored and `p' used.}%
+%<latexrelease>             \@setfpsbit 8%
+%<latexrelease>           \fi\fi\fi\fi\fi
+%<latexrelease>           }%
+%<latexrelease>       \@tempcntb \csname ftype@\@captype \endcsname
+%<latexrelease>       \multiply \@tempcntb \@xxxii
+%<latexrelease>       \advance \@tempcnta \@tempcntb
+%<latexrelease>       \global \count\@currbox \@tempcnta
+%<latexrelease>       }%
+%<latexrelease>    \@fltovf
+%<latexrelease>  \fi
+%<latexrelease>  \global \setbox\@currbox
+%<latexrelease>    \color@vbox
+%<latexrelease>      \normalcolor
+%<latexrelease>      \vbox \bgroup
+%<latexrelease>        \hsize\columnwidth
+%<latexrelease>        \@parboxrestore
+%<latexrelease>        \@floatboxreset
+%<latexrelease>}%
 %<latexrelease>\EndIncludeInRelease
 %<latexrelease>\IncludeInRelease{0000/00/00}%
 %<latexrelease>                 {\@xfloat}{Check float options}%
@@ -720,8 +869,17 @@
 %    maintain the integrity of this code, which is used twice and, as
 %    can be seen, is subject to frequent changes.
 %    \begin{macrocode}
+%</2ekernel>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\@endfloatbox}{Float hooks}%
+%<*2ekernel|latexrelease>
 \def \@endfloatbox{%
-      \par\vskip\z@skip      %% \par\vskip\z@ added 15 Dec 87
+      \par
+%    \end{macrocode}
+% \changes{v1.2k}{2026-10-06}{Execute the \texttt{float/end} hook}
+%    \begin{macrocode}
+      \@float@end@hook
+      \vskip\z@skip      %% \par\vskip\z@ added 15 Dec 87
 %    \end{macrocode}
 % \changes{v1.0a}
 %     {1994/03/07}{(DPC) Extra group for color}
@@ -742,6 +900,19 @@
     \egroup                  %% end of vbox
   \color@endbox
 }
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\@endfloatbox}{Float hooks}%
+%<latexrelease>\def \@endfloatbox{%
+%<latexrelease>      \par\vskip\z@skip
+%<latexrelease>      \@minipagefalse
+%<latexrelease>      \outer@nobreak
+%<latexrelease>    \egroup
+%<latexrelease>  \color@endbox
+%<latexrelease>}
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
 %    \end{macrocode}
 % \end{macro}
 %
@@ -782,10 +953,26 @@
 % \changes{v1.1g}{1994/12/10}{Macros reinserted temporarily}
 %
 %
+% \changes{v1.2k}{2026-10-06}{Execute the \texttt{float/begin} hook
+%    after the width has been set}
 %    \begin{macrocode}
 \def\@dbflt#1{\@ifnextchar[{\@xdblfloat{#1}}{\@xdblfloat{#1}[tp]}}
+%</2ekernel>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\@xdblfloat}{Float hooks}%
+%<*2ekernel|latexrelease>
 \def\@xdblfloat#1[#2]{%
-  \@xfloat{#1}[#2]\hsize\textwidth\linewidth\textwidth}
+  \let\@float@begin@hook\@gobble
+  \@xfloat{#1}[#2]\hsize\textwidth\linewidth\textwidth
+  \@float@usehooks{#1}{*}}
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\@xdblfloat}{Float hooks}%
+%<latexrelease>\def\@xdblfloat#1[#2]{%
+%<latexrelease>  \@xfloat{#1}[#2]\hsize\textwidth\linewidth\textwidth}
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
 %    \end{macrocode}
 %  \end{macro}
 %  \end{macro}

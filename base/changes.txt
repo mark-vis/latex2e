@@ -12,6 +12,12 @@ not part of the distribution.
 	Add \DeclareTemplateInterfaceEquivalents
 	Add support for augmenting key values
 
+2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
+
+	* ltfloat.dtx:
+	Add the hooks float/begin and float/end (executed inside the
+	float box by \@xfloat, \@xdblfloat and \@endfloatbox)
+
 2026-10-01 Joseph Wright  <Joseph.Wright@latex-project.org>
 
 	* ltfloats.dtx:

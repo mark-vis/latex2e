@@ -46,6 +46,8 @@ The sequence \g__hook_all_seq contains the items (without outer braces):
 >  {tbl/cell/init}
 >  {tbl/cell/begin}
 >  {tbl/cell/end}
+>  {float/begin}
+>  {float/end}
 >  {insertmark}
 >  {package/before}
 >  {class/before}
@@ -155,6 +157,8 @@ Data structure for label rules:
 [lthooks] Update code for hook 'tbl/cell/init' on input line ...:
 [lthooks] Update code for hook 'tbl/cell/begin' on input line ...:
 [lthooks] Update code for hook 'tbl/cell/end' on input line ...:
+[lthooks] Update code for hook 'float/begin' on input line ...:
+[lthooks] Update code for hook 'float/end' on input line ...:
 [lthooks] Update code for hook 'insertmark' on input line ...:
 [lthooks] Update code for hook 'package/before' on input line ...:
 [lthooks] Update code for hook 'class/before' on input line ...:
@@ -433,6 +437,8 @@ Data structure for label rules:
 [lthooks] Update code for hook 'tbl/cell/init' on input line ...:
 [lthooks] Update code for hook 'tbl/cell/begin' on input line ...:
 [lthooks] Update code for hook 'tbl/cell/end' on input line ...:
+[lthooks] Update code for hook 'float/begin' on input line ...:
+[lthooks] Update code for hook 'float/end' on input line ...:
 [lthooks] Update code for hook 'insertmark' on input line ...:
 [lthooks] Update code for hook 'package/before' on input line ...:
 [lthooks] Update code for hook 'class/before' on input line ...:

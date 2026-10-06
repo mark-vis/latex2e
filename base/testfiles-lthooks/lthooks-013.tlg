@@ -114,6 +114,8 @@ Data structure for label rules:
 [lthooks] Update code for hook 'tbl/cell/init' on input line ...:
 [lthooks] Update code for hook 'tbl/cell/begin' on input line ...:
 [lthooks] Update code for hook 'tbl/cell/end' on input line ...:
+[lthooks] Update code for hook 'float/begin' on input line ...:
+[lthooks] Update code for hook 'float/end' on input line ...:
 [lthooks] Update code for hook 'insertmark' on input line ...:
 [lthooks] Update code for hook 'package/before' on input line ...:
 [lthooks] Update code for hook 'class/before' on input line ...:
