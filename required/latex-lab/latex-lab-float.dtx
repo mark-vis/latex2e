@@ -206,22 +206,21 @@
 %
 % \begin{variable}{
 %  \g_@@_float_sect_prop,
-%  \g_@@_float_types_seq,
 %  \@current@float@struct,
 %  \g_@@_float_int
 %   }
-% These variables will hold the structure number for the float container
-% and the list of float types. Currently only figure and table are supported
-% TODO: interface to declare new float types.
+% These variables will hold the structure number for the float container.
+% The list of float types, \cs{g_@@_float_types_seq}, is declared in
+% lttagging, new types are added with \cs{DeclareTaggingFloatType}.
 % To set the target for links we need also a unique counter.
 % With tagging we could use the structure number, but
 % the structure commands now are hidden inside tagging sockets
 % so we use a dedicated counter.
 %    \begin{macrocode}
 \prop_new:N \g_@@_float_sect_prop
-\seq_new:N  \g_@@_float_types_seq
-\seq_gput_right:Nn \g_@@_float_types_seq {figure}
-\seq_gput_right:Nn \g_@@_float_types_seq {table}
+%    \end{macrocode}
+% \changes{0.81q}{2026-10-06}{\cs{g_@@_float_types_seq} is now declared in lttagging}
+%    \begin{macrocode}
 \tl_new:N\@current@float@struct
 \int_new:N\g_@@_float_int
 %    \end{macrocode}
@@ -268,6 +267,7 @@
 % This is all done with the following key. The value is the captype.
 % \changes{0.81p}{2026-09-09}{Avoid that float/new errors if the type is already
 % declared}
+% \changes{0.81q}{2026-10-06}{Use kernel command \cs{DeclareTaggingFloatType}}
 %    \begin{macrocode}
 \msg_new:nnn { tag }{ float-exist }
  {
@@ -283,16 +283,8 @@
          \msg_info:nnn { tag } { float-exist }{#1}         
        }
        {
-        \NewStructureName{float/#1s}
-        \AssignStructureRole{float/#1s}{Sect}
-        \NewStructureName{float/#1}
-        \AssignStructureRole{float/#1}{float}
-        \NewStructureName{float/#1/caption}
-        \AssignStructureRole{float/#1/caption}{Caption}
-        \NewStructureName{float/#1/label}
-        \AssignStructureRole{float/#1/label}{Lbl}
-        \seq_gput_right:Nn \g_@@_float_types_seq {#1}
-       } 
+        \DeclareTaggingFloatType{#1}
+       }
     }
  }
 %    \end{macrocode}
@@ -720,6 +712,23 @@
 \AssignSocketPlug{caption/label}{kernel}
 %    \end{macrocode}
 % \end{plugdecl}
+% \begin{macro}{\@@_float_name:n}
+% \changes{0.81q}{2026-10-06}{Fall back to generic names for unknown float types}
+% The symbolic name for the caption or the label of the current float type.
+% Unknown float types (not declared with \cs{DeclareTaggingFloatType}) get a
+% \texttt{float/generic} structure in \cs{@@_float_begin:}, so their caption
+% and label use \texttt{float/generic/caption} and \texttt{float/generic/label}.
+% Before, \cs{UseStructureName} gave an undefined control sequence here.
+%    \begin{macrocode}
+\cs_new:Npn \@@_float_name:n #1
+  {
+    float/
+    \cs_if_exist:cTF { l_@@_name_float/\@captype/#1_tl }
+      { \@captype } { generic }
+    /#1
+  }
+%    \end{macrocode}
+% \end{macro}
 % \begin{plugdecl}{default}
 % The caption begin socket takes an argument: the structure number of
 % the parent float. If the argument is empty, the current structure is used.
@@ -730,10 +739,10 @@
   {
      \tl_if_empty:eTF {#1}
       {
-        \tag_struct_begin:n{tag=\UseStructureName{float/\@captype/caption},firstkid}
+        \tag_struct_begin:n{tag=\UseStructureName{\@@_float_name:n{caption}},firstkid}
       }
       {
-        \tag_struct_begin:n{tag=\UseStructureName{float/\@captype/caption},parent=#1,firstkid}
+        \tag_struct_begin:n{tag=\UseStructureName{\@@_float_name:n{caption}},parent=#1,firstkid}
       }
      \bool_set_true:N \l__tag_para_flattened_bool
   }
@@ -758,7 +767,7 @@
 % suppress para tagging at the begin.
 %    \begin{macrocode}
      \tagpdfparaOff
-     \tag_struct_begin:n{tag=\UseStructureName{float/\@captype/label}}
+     \tag_struct_begin:n{tag=\UseStructureName{\@@_float_name:n{label}}}
      \tag_mc_begin:n{}
   }
 \AssignTaggingSocketPlug{caption/label/begin}{default}
