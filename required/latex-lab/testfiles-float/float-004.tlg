@@ -823,7 +823,7 @@ Completed box being shipped out [1]
 .....\pdfliteral page{EMC}
 .....\write1{\new@label@record{mcid-9}{{tagabspage}{\__property_code_tagabspage: }{tagmcabs}{9}{tagmcid}{\__property_code_tagmcid: }}}
 .....\pdfliteral shipout page{/Link <</MCID \flag_height:n {__tag/mcid}\flag_raise:n {__tag/mcid} >> BDC}
-.....\pdfstartlink(*+*)x* attr{/Border [0 0 1] /H /I /C [0.701176 0.4 0.414118] /StructParent 4 } action goto name{figure.struct.38}
+.....\pdfstartlink(*+*)x* attr{/Border [0 0 1] /H /I /C [0.701176 0.4 0.414118] /StructParent 4 } action goto name{floatstructure.38}
 .....\T1/cmr/m/n/10 3
 .....\pdfendlink
 .....\write1{\new@label@record{@tag@objr@page@4}{{tagabspage}{\__property_code_tagabspage: }}}
@@ -1601,7 +1601,7 @@ Completed box being shipped out [2]
 ......\marks4{b+,30,40,text-block,,,}
 ......\marks4{e-,30,40,}
 ......\marks4{e+,30,40,}
-......\write1{\@writefile{lof}{\protect \contentsline {figure}{\protect \numberline {3}{\ignorespaces The second page from the PDF}}{\thepage }{figure.struct.38}\protected@file@percent }}
+......\write1{\@writefile{lof}{\protect \contentsline {figure}{\protect \numberline {3}{\ignorespaces The second page from the PDF}}{\thepage }{floatstructure.38}\protected@file@percent }}
 ......\glue 10.0
 ......\glue(\baselineskip) 5.1128
 ......\hbox(6.8872+1.94397)x345.0, glue set 81.6333fil
@@ -1661,7 +1661,7 @@ Completed box being shipped out [2]
 ......\marks4{e-,32,44,}
 ......\marks4{e+,32,44,}
 ......\glue 0.0
-......\write1{\newlabel{d}{{3}{\thepage }{Introduction}{figure.struct.38}{}}}
+......\write1{\newlabel{d}{{3}{\thepage }{Introduction}{floatstructure.38}{}}}
 ......\glue 0.0
 ....\glue 0.0 plus 1.0fil
 ...\pdfrunninglinkoff

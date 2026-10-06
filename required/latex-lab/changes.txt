@@ -1,6 +1,14 @@
 2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
 
 	* latex-lab-float.dtx:
+	Store the float target in \@floatHref@<type> at the float start and
+	in float/split, and remove the plug latex-lab of caption/step (the
+	kernel plug uses the float target): a caption after float/split used
+	a target that is never made, a table caption inside a figure the
+	target table.struct.<n>, which does not exist either; generic
+	structure names also if \@captype is undefined
+
+	* latex-lab-float.dtx:
 	No longer redefine \caption: a plug of the kernel socket
 	caption/step gives captions in floats the target at the start of the
 	float, as before; support \caption* (plugs nolabel of the label

@@ -107,8 +107,8 @@
 % \pkg{hyperref} doesn't patch the caption commands anymore if \cs{DocumentMetadata} is used.
 % The code here has to add a target for links. To improve the linking behavior,
 % it add this target at the begin of the float (and at the begin of split if the float is split)
-% and uses a plug of the kernel socket \texttt{caption/step}, so that a link to a
-% caption label will go to this target.
+% and stores its name in \cs{@floatHref@}\meta{type}, so that the kernel \cs{caption}
+% uses it and a link to a caption label will go to this target.
 %
 % \section{Keys}
 %
@@ -178,6 +178,22 @@
 % this is the structure number, without tagging a unique counter. A float
 % can contain more than one float structure (e.g., if there is more than one
 % caption).
+% \end{function}
+%
+% \begin{function}{\@floatHref@<type>}
+% \changes{0.81q}{2026-10-06}{Document the float target}
+% If \cs{@floatHref@}\meta{type} is defined, not \cs{relax} and not empty,
+% it holds the link target of the current float of type \meta{type}. The code
+% sets it locally inside the float box, right after the target is made:
+% to \meta{type}\texttt{.struct.}\meta{n} at the start of the float and to
+% \texttt{floatstructure.}\meta{n} after \texttt{float/split}. The kernel
+% never sets it; the default plug of the
+% socket \texttt{caption/step} uses it as the target of the caption. As the name
+% contains the type, a \texttt{table} caption inside a \texttt{figure} and the step
+% of a sub-caption counter (e.g., \texttt{subfigure}) do not use the target of the
+% figure. Other code that needs the float target (e.g., the \pkg{caption} package)
+% should read it in the same way (with \cs{@ifundefined}, not only with
+% \cs{csname}, which would make an undefined name \cs{relax}).
 % \end{function}
 %
 % \begin{function}{\@makecaption}
@@ -419,6 +435,14 @@
       \@@_float_init:
       \UseTaggingSocket{float/begin}
       \MakeLinkTarget*{floatstructure.\@current@float@struct}
+%    \end{macrocode}
+% \changes{0.81q}{2026-10-06}{Set the float target \cs{@floatHref@}\meta{type}:
+%   a caption after the split used a target that does not exist}
+% The following captions use the new target (before, they used
+% \meta{type}\texttt{.struct.}\meta{n} with the new number, a target that
+% is never made).
+%    \begin{macrocode}
+      \cs_set_eq:cN { @floatHref@ \@captype } \@currentHref
     }
  }
 %    \end{macrocode}
@@ -625,6 +649,13 @@
 %    \begin{macrocode}
         \MakeLinkTarget*{\@captype.struct.\@current@float@struct}%
 %    \end{macrocode}
+% \changes{0.81q}{2026-10-06}{Set the float target \cs{@floatHref@}\meta{type}}
+% Its name is stored for the captions of the float (\cs{@currentHref} and not the
+% literal name, so that a renaming by \texttt{target/setname/after} is respected).
+% This is done before the hook \hook{float/begin}, so that code in the hook sees it.
+%    \begin{macrocode}
+        \expandafter\let\csname @floatHref@\@captype\endcsname\@currentHref
+%    \end{macrocode}
 % \changes{0.81q}{2026-10-06}{Execute the kernel hook \texttt{float/begin}}
 % Then the kernel hook \hook{float/begin}, so that code in the hook
 % is inside the float structure and after the link target.
@@ -720,12 +751,19 @@
 % \texttt{float/generic} structure in \cs{@@_float_begin:}, so their caption
 % and label use \texttt{float/generic/caption} and \texttt{float/generic/label}.
 % Before, \cs{UseStructureName} gave an undefined control sequence here.
+% \changes{0.81q}{2026-10-06}{Generic names also if \cs{@captype} is undefined}
+% The generic names are also used if \cs{@captype} is undefined, e.g., for
+% captions outside of floats made by packages.
 %    \begin{macrocode}
 \cs_new:Npn \@@_float_name:n #1
   {
     float/
-    \cs_if_exist:cTF { l_@@_name_float/\@captype/#1_tl }
-      { \@captype } { generic }
+    \cs_if_exist:NTF \@captype
+      {
+        \cs_if_exist:cTF { l_@@_name_float/\@captype/#1_tl }
+          { \@captype } { generic }
+      }
+      { generic }
     /#1
   }
 %    \end{macrocode}
@@ -812,38 +850,15 @@
 %
 % \subsubsection{Stepping the counter}
 %
-% \changes{0.81q}{2026-10-06}{Use the kernel socket \texttt{caption/step}
-%   instead of redefining \cs{caption}}
+% \changes{0.81q}{2026-10-06}{No plug for the kernel socket \texttt{caption/step}
+%   and no redefinition of \cs{caption}: the kernel plug uses the float target}
 % With hyperref the \cs{refstepcounter} now can affect spacing, so the caption
 % should not make a new target inside a float but use the target at the
-% begin of the float. The kernel \cs{caption} steps the counter through the
-% socket \texttt{caption/step}, so we only need a plug and no longer redefine
-% \cs{caption}. It is a normal socket and not a tagging socket, because the
-% float target is also used if tagging is not active.
-% \begin{plugdecl}{latex-lab (caption/step)}
-% If a caption is used outside a float no
-% target has been set and \cs{@current@float@struct} is empty, so the
-% kernel plug makes a target as \cs{refstepcounter} does. Otherwise the
-% caption uses the target at the begin of the float (we use \cs{@captype}
-% to support autoref): the plug stores its name, locally, as the float
-% target \cs{@floatHref@}\meta{type} that the kernel plug uses, and then
-% uses the kernel plug. This is only done for the counter of the float
-% type (\cs{@captype}), as the redefinition of \cs{caption} did before;
-% other code that uses the socket for another counter (e.g., for a
-% sub-caption) gets the kernel plug.
-%    \begin{macrocode}
-\NewSocketPlug{caption/step}{latex-lab}
-  {
-    \tl_if_empty:NF \@current@float@struct
-      {
-        \str_if_eq:eeT { #1 } { \cs_if_exist_use:N \@captype }
-          { \cs_set_nopar:cpe { @floatHref@ #1 } { \@captype.struct.\@current@float@struct } }
-      }
-    \@kernel@caption@step {#1}
-  }
-\AssignSocketPlug{caption/step}{latex-lab}
-%    \end{macrocode}
-% \end{plugdecl}
+% begin of the float. The default plug of the kernel socket \texttt{caption/step}
+% uses \cs{@floatHref@}\meta{type}, which we set at the start of the float and in
+% \texttt{float/split}, so neither a plug nor a redefinition of \cs{caption} is
+% needed. Outside of floats the name is undefined,
+% and the caption makes its own target as with \cs{refstepcounter}.
 %
 % \begin{macro}{\@makecaption}
 % \cs{@makecaption} is defined by the classes so we overwrite it for now

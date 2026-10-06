@@ -874,7 +874,7 @@ Completed box being shipped out [1]
 .....\glue(\spaceskip) 0.00333 plus 1.66666 minus 1.11111
 .....\pdfliteral page <lua data reference ...>
 .....\pdfliteral page <lua data reference ...>
-.....\pdfstartlink(*+*)x* attr{/Border [0 0 1] /H /I /C [0.701176 0.4 0.414118]  /LTEX_position /isolated/StructParent 4} action struct name{figure.struct.39} goto name{figure.struct.39}
+.....\pdfstartlink(*+*)x* attr{/Border [0 0 1] /H /I /C [0.701176 0.4 0.414118]  /LTEX_position /isolated/StructParent 4} action struct name{floatstructure.39} goto name{floatstructure.39}
 .....\OT1/cmr/m/n/10 3
 .....\pdfendlink
 .....\pdfliteral page <lua data reference ...>
@@ -1725,7 +1725,7 @@ Completed box being shipped out [2]
 .......\glue(\rightskip) 0.0
 ......\pdfliteral page <lua data reference ...>
 ......\pdfliteral page <lua data reference ...>
-......\write1{\@writefile{lof}{\protect \contentsline {figure}{\protect \numberline {3}{\ignorespaces The second page from the PDF}}{\thepage }{figure.struct.39}\protected@file@percent }}
+......\write1{\@writefile{lof}{\protect \contentsline {figure}{\protect \numberline {3}{\ignorespaces The second page from the PDF}}{\thepage }{floatstructure.39}\protected@file@percent }}
 ......\glue 10.0
 ......\glue(\baselineskip) 5.05556
 ......\hbox(6.94444+1.94444)x345.0, glue set 81.61096fil, direction TLT
@@ -1788,7 +1788,7 @@ Completed box being shipped out [2]
 ......\glue 0.0
 ......\pdfliteral page <lua data reference ...>
 ......\pdfliteral page <lua data reference ...>
-......\write1{\newlabel{d}{{3}{\thepage }{Introduction}{figure.struct.39}{}}}
+......\write1{\newlabel{d}{{3}{\thepage }{Introduction}{floatstructure.39}{}}}
 ......\glue 0.0
 ....\glue 0.0 plus 1.0fil
 ...\pdflinkstate 1
