@@ -72,6 +72,7 @@ MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces A \# B], star=false
 TEST 8: continued float: no step, counters reset by figure kept
 ============================================================
 BEFORE: {figure}{false}{NoValue}{Continued}, figure=8, linewidth=345.0pt
+TARGET: new target figure.8*1
 ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Continued}}
 MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Continued], star=false
 figure=8, label=8, sub=3

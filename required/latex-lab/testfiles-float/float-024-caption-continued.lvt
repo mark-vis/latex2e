@@ -1,0 +1,68 @@
+% Test of the caption interface with the real plugs of
+% hyperref, without \DocumentMetadata (so without float targets of
+% latex-lab; it is here because base tests cannot load hyperref):
+% hyperref is told not to replace \caption and \@caption
+% (\hyper@nopatch@caption, as with \DocumentMetadata), so the kernel
+% \caption and the hyperref plugs of refstepcounter/target and
+% \MakeLinkTarget are used.
+% A caption that does not step the counter (continued float) must not
+% make a second target with the name of the last stepped caption (that
+% gave "destination with the same identifier" and links to the first
+% caption): it gets a target with a unique name, and its \label
+% records the number of the counter and that target. \caption* makes
+% no target and no list entry.
+\input{regression-test}
+\documentclass{article}
+\makeatletter
+\def\hyper@nopatch@caption{}
+\makeatother
+\usepackage{hyperref}
+\makeatletter
+\newif\ifcontinued
+\AddToHookWithArguments{caption/before}[test]{%
+  \ifcontinued \@captionstepfalse \fi
+  \csname testbefore\endcsname}
+\def\targetoff{\@captiontargetfalse}
+\def\showhref#1{\typeout{#1: label=\@currentlabel, href=\@currentHref}}
+\def\showref#1{\typeout{#1: \expandafter\meaning\csname r@#1\endcsname}}
+\def\setcaptype#1{\def\@captype{#1}}
+\makeatother
+\begin{document}
+\START
+\TEST{captions outside of floats}{%
+  \begin{minipage}{5cm}
+    \setcaptype{figure}%
+    \caption{First}\label{a}\showhref{First}
+    \continuedtrue
+    \caption{First, continued}\label{ac}\showhref{Continued}
+    \caption{First, continued again}\label{acc}\showhref{Continued again}
+    \continuedfalse
+    \caption{Second}\label{b}\showhref{Second}
+  \end{minipage}}
+\TEST{captions in floats}{%
+  \begin{figure}[h]
+    \caption{Third}\label{c}\showhref{Third}
+  \end{figure}
+  \begin{figure}[h]
+    \continuedtrue
+    \caption{Third, continued}\label{cc}\showhref{Continued}
+  \end{figure}
+  \begin{figure}[h]
+    \caption{Fourth}\label{d}\showhref{Fourth}
+  \end{figure}}
+\TEST{no step and no target: href unchanged}{%
+  \begin{figure}[h]
+    \continuedtrue
+    \let\testbefore\targetoff
+    \caption{Fourth, continued, no target}\showhref{No target}
+  \end{figure}}
+\TEST{caption*: no step, no target}{%
+  \begin{figure}[h]
+    \caption*{Starred}\showhref{Starred}
+  \end{figure}}
+\TEST{labels}{%
+  \showref{a}\showref{ac}\showref{acc}\showref{b}%
+  \showref{c}\showref{cc}\showref{d}}
+\TEST{destinations (no duplicate)}{%
+  \clearpage}
+\END

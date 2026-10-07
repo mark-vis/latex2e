@@ -1,6 +1,7 @@
 % Roll-back of the caption interface: with latexrelease 2026-06-01 the
-% old \caption and \@caption are back, \@kernel@caption and
-% \@kernel@caption@reset are undefined, the hook is not executed, and
+% old \caption and \@caption are back, \@kernel@caption,
+% \@kernel@caption@reset and \@kernel@caption@unique are undefined, the
+% hook is not executed, and
 % the guarded declarations give no errors.
 \RequirePackage[2026-06-01]{latexrelease}
 \documentclass{article}
@@ -10,7 +11,9 @@
   \typeout{\string\@kernel@caption:
     \ifdefined\@kernel@caption defined\else undefined\fi,
     \string\@kernel@caption@reset:
-    \ifdefined\@kernel@caption@reset defined\else undefined\fi}}
+    \ifdefined\@kernel@caption@reset defined\else undefined\fi,
+    \string\@kernel@caption@unique:
+    \ifdefined\@kernel@caption@unique defined\else undefined\fi}}
 \AddToHookWithArguments{caption/before}{\typeout{BEFORE: #1}}
 \let\ORImakecaption\@makecaption
 \long\def\@makecaption#1#2{%
