@@ -298,9 +298,17 @@
 %      omits the label \emph{and} its separator (the tagging code does
 %      that); this is the only documented test (a test for an empty label
 %      does not work). For the many definitions that do not test it,
-%      \cs{@caption@nolabel} typesets nothing, but their separator is
-%      printed before the text (for example `: Text' with the standard
-%      classes). The standard classes are not changed, because packages
+%      \cs{@caption@nolabel} typesets nothing and removes the usual
+%      separators after it (a colon or a period and the following
+%      space, also across the end of a group or of \cs{textbf}), so the
+%      standard classes, many classes derived from them and classes such
+%      as \cls{llncs}, \cls{IEEEtran} and \cls{mwart} show neither label
+%      nor separator without any change. A separator in a macro
+%      (\pkg{KOMA-Script}, \cls{memoir}, \cls{amsart}, \pkg{babel-french}
+%      for French with pdf\TeX), another space (\cs{hskip},
+%      \cs{hspace}) or another character is printed before the text; in
+%      most cases a warning is given then (once), see
+%      \cs{@caption@nolabel}. The standard classes are not changed, because packages
 %      compare \cs{@makecaption} with their definition (for example
 %      \pkg{babel-french}, which replaces the separator for French only if
 %      \cs{@makecaption} is the standard one).
@@ -682,20 +690,210 @@
 % \end{macro}
 %
 % \begin{macro}{\@caption@nolabel}
+% \begin{macro}{\@caption@nolabel@look,\@caption@nolabel@do,
+%                \@caption@nolabel@next,\@caption@nolabel@drop,
+%                \@caption@nolabel@punct,\@caption@nolabel@space,
+%                \@caption@nolabel@group,\@caption@nolabel@stop,
+%                \@caption@nolabel@clean,\@caption@nolabel@other,
+%                \@caption@nolabel@brace,\@caption@nolabel@line,
+%                \@caption@nolabel@hmode,\@caption@nolabel@m,
+%                \@caption@nolabel@nowarn,\@caption@nolabel@warn}
 % \changes{v1.2k}{2026-10-06}{Macro added: \cs{@caption@nolabel}, the label
 %    of \cs{caption*}}
+% \changes{v1.2k}{2026-10-06}{The label of \cs{caption*} removes the usual
+%    separators after it}
 %    \cs{@caption@nolabel} is the label that \cs{caption*} passes to
 %    \cs{@makecaption}. The contract for \cs{@makecaption} is only that
 %    \cs{if@captionstar} is true and that the label is not empty but
 %    typesets nothing; a \cs{@makecaption} that supports \cs{caption*}
-%    tests the switch and omits the label and its separator. A separator
-%    that the \cs{@makecaption} of the class puts after the label is
-%    printed before the text.
+%    tests the switch and omits the label and its separator.
+%
+%    Everything else is a convenience for the many \cs{@makecaption}
+%    definitions that do not (yet) test the switch. It is separate from
+%    the contract: if \cs{@caption@nolabel@look} were \cs{@gobble}, the
+%    label would simply typeset nothing. While \cs{if@captionstar} is true,
+%    the label looks at the tokens after it:
+%    \begin{itemize}
+%    \item A colon or a period directly after the label is removed
+%      (spaces before it are skipped), then spaces, |~|,
+%      \cs{nobreakspace}, \cs{space}, |\ |, \cs{enspace}, \cs{enskip},
+%      \cs{quad} and \cs{qquad}.
+%    \item If the label, or what was removed after it, is the last thing
+%      in a group or in the argument of \cs{textbf} or another command
+%      defined with \cs{DeclareTextFontCommand} (recognized by
+%      \cs{check@icr}), this continues after the end of the group (with
+%      \cs{aftergroup}), where a colon or a period can still follow if
+%      nothing has been removed yet (|{#1}: #2|, |\textbf{#1}: #2|). The
+%      italic correction \cs{maybe@ic} that \cs{check@icr} puts after
+%      the group is removed, since there is nothing to correct.
+%    \item If something was removed, the paragraph is started
+%      (\cs{leavevmode}), in the group of the removed material, as that
+%      material would have done. This is not done if \cs{par} follows in
+%      that group, so a label line such as |{\centering #1.\par}| gives
+%      no empty line; a \cs{par} after the end of the group
+%      (|{\bfseries #1.}\par|) comes too late and still gives one.
+%    \item If, in the group of the label, the label or the removed
+%      material is followed by anything else than the text (which starts
+%      with \cs{ignorespaces}), \cs{par}, \cs{relax}, \cs{@},
+%      \cs{vadjust}, \cs{penalty}, the end of a conditional, the end of a box that
+%      measures the label (\cs{sbox},
+%      \cs{settowidth}) or, after a removed separator, a group (which can
+%      contain the text), it is taken as material that is printed before
+%      the text: a separator in a macro (such as \cs{captionformat} of
+%      \pkg{KOMA-Script}, \cs{@contdelim} of \cls{memoir} or the
+%      separator of \pkg{babel-french}), other space (\cs{hskip}, also in
+%      braces) or a character (|--|). Then a warning is given once per
+%      document. The paragraph is not started for it (unless something
+%      was removed before it), so that in vertical mode a space at the
+%      start of a separator macro is still ignored, as without the label,
+%      and vertical material (\cs{vskip}) stays vertical. After the end
+%      of a group, the class code can continue with anything (for
+%      example with code that measures or boxes the label), so nothing is
+%      checked there: a separator after a group that contains only the
+%      label (|\textit{#1}\textbf{:}|, |\fbox{#1}:|) is printed without a
+%      warning. \cs{relax} also ends the look-ahead without a warning, so
+%      a separator after it is printed silently as well
+%      (|#1\relax\hskip1em|, and |#1\protect\sep| while typesetting, where
+%      \cs{protect} is \cs{relax}).
+%    \item \cs{unskip}, \cs{unkern} and \cs{unpenalty} directly after the
+%      label or the removed material are removed as well: they are meant
+%      for the end of the label, which is empty, and in vertical mode
+%      they would remove vertical material instead (such as
+%      \cs{abovecaptionskip}).
+%    \item The rule for the paragraph: it is started before the
+%      primitives whose meaning depends on the mode (\cs{kern},
+%      \cs{penalty}, \cs{hbox}, \cs{vbox}, \cs{vtop}, \cs{box},
+%      \cs{copy}, \cs{raise}, \cs{lower}, \cs{vadjust}) and before
+%      \verb|\\|, \cs{newline} and \cs{@}, so that they act in horizontal
+%      mode, as after a label, and do not give an error in vertical mode.
+%      It is not started before \cs{par}, \cs{vskip}, a space or a macro
+%      (macros are not looked into). \cs{kern}, the boxes, \cs{raise},
+%      \cs{lower}, \verb|\\| and \cs{newline} also warn, as they print
+%      space, material or an empty line before the text; \cs{penalty},
+%      \cs{vadjust} and \cs{@} do not.
+%    \end{itemize}
+%    Nothing of the text is removed, because the text passed to
+%    \cs{@makecaption} starts with \cs{ignorespaces}. All of this is
+%    only done while \cs{if@captionstar} is true, so the label does
+%    nothing else if it ends up somewhere else.
 %    The command is robust, so that it survives \cs{edef} and case
 %    changing of the label.
 %    \begin{macrocode}
-\protected\def\@caption@nolabel{}
+\protected\def\@caption@nolabel{%
+  \if@captionstar
+    \expandafter\@caption@nolabel@look\expandafter P%
+  \fi}
 %    \end{macrocode}
+%    The argument of \cs{@caption@nolabel@look} is the state, a letter:
+%    |P| (nothing removed yet, in the group of the label), |Q| (nothing
+%    removed, after the end of a group), |S| (something removed, in its
+%    group) or |G| (something removed, after the end of its group). A
+%    colon or a period is only removed in states |P| and |Q|, and only
+%    |P| and |S| can warn. \cs{kernel@ifnextchar} skips (removes)
+%    spaces and leaves the next token in \cs{@let@token}. Then
+%    \cs{@caption@nolabel@do} decides what to do with that token. To
+%    keep conditionals balanced, \cs{@let@token}, which can be \cs{fi},
+%    is only used directly after \cs{ifx} and never in a branch that
+%    may be skipped.
+%    \begin{macrocode}
+\def\@caption@nolabel@look#1{%
+  \kernel@ifnextchar\relax
+    {\@caption@nolabel@do#1}{\@caption@nolabel@do#1}}
+\def\@caption@nolabel@do#1{%
+  \def\@caption@nolabel@next{\@caption@nolabel@stop#1}%
+  \ifx\@let@token\egroup\@caption@nolabel@group#1\fi
+  \ifx\@let@token\check@icr\@caption@nolabel@group#1\fi
+  \ifx\@let@token\maybe@ic\@caption@nolabel@drop#1\fi
+  \ifx\@let@token\unskip\@caption@nolabel@drop#1\fi
+  \ifx\@let@token\unkern\@caption@nolabel@drop#1\fi
+  \ifx\@let@token\unpenalty\@caption@nolabel@drop#1\fi
+  \ifx\@let@token:\@caption@nolabel@punct#1\fi
+  \ifx\@let@token.\@caption@nolabel@punct#1\fi
+  \ifx\@let@token~\@caption@nolabel@space#1\fi
+  \ifx\@let@token\nobreakspace\@caption@nolabel@space#1\fi
+  \ifx\@let@token\space\@caption@nolabel@space#1\fi
+  \ifx\@let@token\ \@caption@nolabel@space#1\fi
+  \ifx\@let@token\enspace\@caption@nolabel@space#1\fi
+  \ifx\@let@token\enskip\@caption@nolabel@space#1\fi
+  \ifx\@let@token\quad\@caption@nolabel@space#1\fi
+  \ifx\@let@token\qquad\@caption@nolabel@space#1\fi
+  \@caption@nolabel@next}
+\def\@caption@nolabel@drop#1{%
+  \def\@caption@nolabel@next##1{\@caption@nolabel@look#1}}
+\def\@caption@nolabel@punct#1{%
+  \if P#1\@caption@nolabel@drop S\fi
+  \if Q#1\@caption@nolabel@drop S\fi}
+\def\@caption@nolabel@space#1{%
+  \if G#1\@caption@nolabel@drop G\else\@caption@nolabel@drop S\fi}
+\def\@caption@nolabel@group#1{%
+  \edef\@caption@nolabel@next{%
+    \if S#1\noexpand\leavevmode\fi
+    \aftergroup\noexpand\@caption@nolabel@look
+    \aftergroup\if P#1Q\else\if S#1G\else#1\fi\fi}}
+%    \end{macrocode}
+%    At any other token the label is done. \cs{par} and \cs{@@par} end
+%    without a paragraph. The tokens that are no separator
+%    (\cs{@caption@nolabel@clean}) only start the paragraph if
+%    something was removed; a group is such a token only after a
+%    removed separator (\cs{@caption@nolabel@brace}). The end of a conditional is recognized by
+%    its meaning as a string, so that no \cs{fi} appears in a test.
+%    \cs{penalty}, \cs{vadjust} and \cs{@} always start the paragraph
+%    (\cs{@caption@nolabel@hmode}); the other mode-dependent primitives,
+%    \verb|\\| and \cs{newline} also warn (\cs{@caption@nolabel@line}).
+%    Anything else (\cs{@caption@nolabel@other}) is printed: in states
+%    |P| and |S| this warns; only in state |S| it starts the paragraph.
+%    \begin{macrocode}
+\def\@caption@nolabel@stop#1{%
+  \let\@caption@nolabel@next\@caption@nolabel@other
+  \ifx\@let@token\ignorespaces
+    \let\@caption@nolabel@next\@caption@nolabel@clean\fi
+  \ifx\@let@token\bgroup\let\@caption@nolabel@next\@caption@nolabel@brace\fi
+  \ifx\@let@token\relax\let\@caption@nolabel@next\@caption@nolabel@clean\fi
+  \ifx\@let@token\@\let\@caption@nolabel@next\@caption@nolabel@hmode\fi
+  \ifx\@let@token\vadjust\let\@caption@nolabel@next\@caption@nolabel@hmode\fi
+  \ifx\@let@token\penalty\let\@caption@nolabel@next\@caption@nolabel@hmode\fi
+  \ifx\@let@token\kern\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\hbox\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\vbox\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\vtop\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\box\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\copy\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\raise\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\lower\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\color@endgroup
+    \let\@caption@nolabel@next\@caption@nolabel@clean\fi
+  \ifx\@let@token\ResumeTagging
+    \let\@caption@nolabel@next\@caption@nolabel@clean\fi
+  \ifx\@let@token\par\let\@caption@nolabel@next\@gobble\fi
+  \ifx\@let@token\@@par\let\@caption@nolabel@next\@gobble\fi
+  \ifx\@let@token\\\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \ifx\@let@token\newline\let\@caption@nolabel@next\@caption@nolabel@line\fi
+  \edef\@caption@nolabel@m{,\meaning\@let@token,}%
+  \@expandtwoargs\in@\@caption@nolabel@m\@caption@nolabel@nowarn
+  \ifin@\let\@caption@nolabel@next\@caption@nolabel@clean\fi
+  \@caption@nolabel@next#1}
+\edef\@caption@nolabel@nowarn{,\string\fi,\string\else,\string\or,}
+\def\@caption@nolabel@clean#1{\if S#1\expandafter\leavevmode\fi}
+\def\@caption@nolabel@other#1{%
+  \if\if Q#1G\else#1\fi G\else
+    \@caption@nolabel@warn
+  \fi
+  \@caption@nolabel@clean#1}
+\def\@caption@nolabel@hmode#1{\leavevmode}
+\def\@caption@nolabel@brace#1{%
+  \if P#1\expandafter\@caption@nolabel@other
+  \else\expandafter\@caption@nolabel@clean\fi#1}
+\def\@caption@nolabel@line#1{\@caption@nolabel@other#1\leavevmode}
+\def\@caption@nolabel@warn{%
+  \global\let\@caption@nolabel@warn\relax
+  \@latex@warning{%
+    \string\caption* is used with a caption layout of the\MessageBreak
+    class or of a package that does not support it,\MessageBreak
+    so a separator or a space may be printed before\MessageBreak
+    the text%
+  }}
+%    \end{macrocode}
+% \end{macro}
 % \end{macro}
 %
 %    \begin{macrocode}

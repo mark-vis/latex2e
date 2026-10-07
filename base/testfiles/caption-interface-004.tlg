@@ -12,11 +12,11 @@ ADDCONTENTSLINE: {}{figure}{\protect \numberline {\csname thefigure\endcsname }{
 MAKECAPTION: label=[\fnum@figure ], star=true
 figure=1
 SWITCHES: star=true, step=true, target=true
-after: fnum=\protected macro:->, ext=macro:->, theH=macro:->\@caption@H@figure *1
+after: fnum=\protected macro:->\if@captionstar \expandafter \@caption@nolabel@look \expandafter P\fi , ext=macro:->, theH=macro:->\@caption@H@figure *1
 BEFORE: {figure}{true}{[Opt]}{Starred with option}, figure=1, linewidth=345.0pt
 ADDCONTENTSLINE: {}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Opt}}
 MAKECAPTION: label=[\fnum@figure ], star=true
-after: fnum=\protected macro:->, ext=macro:->, theH=macro:->\@caption@H@figure *2
+after: fnum=\protected macro:->\if@captionstar \expandafter \@caption@nolabel@look \expandafter P\fi , ext=macro:->, theH=macro:->\@caption@H@figure *2
 BEFORE: {figure}{false}{NoValue}{Second}, figure=1, linewidth=345.0pt
 TARGET: new target figure.2
 ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Second}}
@@ -28,7 +28,7 @@ SWITCHES: star=false, step=true, target=true
 TEST 2: caption* with a wrapper of the kernel @caption
 ============================================================
 BEFORE: {figure}{true}{NoValue}{Starred}, figure=2, linewidth=345.0pt
-WRAPPER: fnum=\protected macro:->
+WRAPPER: fnum=\protected macro:->\if@captionstar \expandafter \@caption@nolabel@look \expandafter P\fi 
 MAKECAPTION: [\@caption@nolabel ] [\ignorespaces Starred], star=true
 figure=2
 SWITCHES: star=false, step=true, target=true
@@ -43,7 +43,7 @@ MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Normal], star=false
 TEST 3: caption* with a deferred kernel @caption
 ============================================================
 BEFORE: {figure}{true}{NoValue}{Deferred star}, figure=3, linewidth=345.0pt
-after: fnum=\protected macro:->, ext=macro:->, theH=macro:->\@caption@H@figure *1
+after: fnum=\protected macro:->\if@captionstar \expandafter \@caption@nolabel@look \expandafter P\fi , ext=macro:->, theH=macro:->\@caption@H@figure *1
 MAKECAPTION: [\@caption@nolabel ] [\ignorespaces Deferred star], star=true
 figure=3
 SWITCHES: star=false, step=true, target=true
@@ -60,7 +60,7 @@ BEFORE: {figure}{true}{NoValue}{Starred}, figure=4, linewidth=345.0pt
 CLASS TARGET: figure.4*1
 ADDCONTENTSLINE: {}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Starred}}
 MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Starred], star=true
-after: fnum=\protected macro:->, ext=macro:->, theH=macro:->\@caption@H@figure *1
+after: fnum=\protected macro:->\if@captionstar \expandafter \@caption@nolabel@look \expandafter P\fi , ext=macro:->, theH=macro:->\@caption@H@figure *1
 ADDCONTENTSLINE: {lof}{figure}{Manual entry after caption*}
 BEFORE: {figure}{false}{NoValue}{Second}, figure=4, linewidth=345.0pt
 TARGET: new target figure.5
@@ -107,7 +107,7 @@ BEFORE: {figure}{true}{NoValue}{Starred}, figure=6, linewidth=345.0pt
 ADDCONTENTSLINE: {}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Starred}}
 MAKECAPTION: label=[\fnum@figure ], star=true
 SWITCHES: star=true, step=true, target=true
-after: fnum=\protected macro:->, ext=macro:->, theH=macro:->\@caption@H@figure *2
+after: fnum=\protected macro:->\if@captionstar \expandafter \@caption@nolabel@look \expandafter P\fi , ext=macro:->, theH=macro:->\@caption@H@figure *2
 giveback: macro:->\@caption@uniqueH@back {figure.6}{2}
 SWITCHES: star=false, step=true, target=true
 after: fnum=macro:->\figurename \nobreakspace \thefigure , ext=macro:->lof, theH=macro:->\the \value {figure}

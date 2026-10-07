@@ -15,6 +15,12 @@ not part of the distribution.
 2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
 
 	* ltfloat.dtx, clsguide.tex:
+	The label \@caption@nolabel of \caption* removes the usual separator
+	after it (a colon or a period and the following space), so the
+	standard classes need no change; it warns once if something else
+	follows
+
+	* ltfloat.dtx, clsguide.tex:
 	With an \@caption that a class or package has replaced, \caption*
 	gives no label, no list entry and no duplicate target either, until
 	\@kernel@caption@reset (\caption starts with it)

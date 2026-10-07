@@ -1528,11 +1528,18 @@ so that classes and packages do not need to redefine
 \item \cs{@makecaption}\arg{label}\arg{text} is also used for
   \cs{caption*}. Then the switch \cs{if@captionstar} is true and
   \meta{label} is \cs{@caption@nolabel}. This label is not empty (a test
-  for an empty label does not work), but it typesets nothing. A class
-  should omit the label \emph{and} the separator if the switch is true;
-  otherwise the separator is printed before the text (`: Text' with
-  \verb|#1: #2|, as in the standard classes). The switch is the only
-  test that classes should use, for example:
+  for an empty label does not work), but it typesets nothing, and it
+  removes the usual separators that follow it directly: a colon or a
+  period and the space after them, also after the end of a group or of
+  \cs{textbf}. So a \cs{@makecaption} that typesets \verb|#1: #2|, as the
+  standard classes do, or \verb|{\bfseries #1.} #2| and similar forms
+  needs no change. A class whose separator is in a macro, or that adds
+  other space or characters after the label, should omit the label
+  \emph{and} the separator if the switch is true. Otherwise they are
+  printed before the text; in most cases \LaTeX{} then warns once, but
+  not always (for example not for a separator after a group that
+  contains only the label, as in \verb|\textit{#1}\textbf{:}|). The
+  switch is the only test that classes should use, for example:
 \begin{verbatim}
 \sbox\@tempboxa{\if@captionstar\else#1\captionsep\fi#2}%
 \end{verbatim}
