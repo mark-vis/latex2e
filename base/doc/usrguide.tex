@@ -44,7 +44,7 @@
     \texttt{usrguide.tex} for full details.}%
 }
 
-\date{2026-09-07}
+\date{2026-10-06}
 
 \NewDocumentCommand\cs{m}{\texttt{\textbackslash\detokenize{#1}}}
 \NewDocumentCommand\marg{m}{\arg{#1}}
@@ -1523,6 +1523,34 @@ respectively
   \item The vertical gap below the rule.
 \end{itemize}
 The naming here follows the pattern established by OpenType math parameters.
+
+% This section assumes support in hyperref: when
+% \@kernel@caption is defined, hyperref keeps its \caption for numbered
+% captions, passes only the star to \@kernel@caption*, and starts each
+% numbered caption with \@kernel@caption@reset. Until then \caption*
+% gives the old output with hyperref without \DocumentMetadata, the most
+% common setup.
+\section{Captions without a number}
+
+\begin{decl}
+  |\caption*| \oarg{opt} \arg{text}
+\end{decl}
+Where \cs{caption} can be used (inside a float, for example), \cs{caption*}
+typesets \meta{text} as a caption without a label: the counter of the float
+is not stepped, nothing is written to the list of figures, tables, etc., and
+no link target is made. There is nothing for a \cs{label} to refer to, so do
+not use \cs{label} after \cs{caption*} (as after \cs{section*}, it would
+record whatever was set last). The optional argument is accepted for symmetry with
+\cs{caption}; the kernel does not use it, but packages may.
+
+The caption has the layout of the document class. The standard classes and
+many others omit the label and its separator (a colon or a period). A class
+or package that defines the separator in another way and has not yet been
+updated for \cs{caption*} prints it before the text; in most cases \LaTeX{}
+then warns once. Classes and packages that replace \cs{caption} itself may
+not support the star form yet: with them \verb|\caption*{Text}| gives, as
+before, a numbered caption with the text `*' and a list entry, followed by
+`Text'.
 
 \section{Support for problem solving}
 

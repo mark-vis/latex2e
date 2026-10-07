@@ -1519,10 +1519,10 @@ This changes the name of the next target that will be created.
 
 \subsection{Captions and \cs{caption*}}
 
-\LaTeX{} provides \cs{caption*} for captions without a number. It uses
-the class's \cs{@makecaption}, and the kernel offers hooks and sockets
-so that classes and packages do not need to redefine
-\cs{caption} or \cs{@caption} (see the documentation of
+\LaTeX{} provides \cs{caption*} for captions without a number (see
+\texttt{usrguide}). It uses the class's \cs{@makecaption}, and the kernel
+offers hooks and sockets so that classes and packages do not need to
+redefine \cs{caption} or \cs{@caption} (see the documentation of
 \texttt{ltfloat.dtx}). For classes this means:
 \begin{itemize}
 \item \cs{@makecaption}\arg{label}\arg{text} is also used for
