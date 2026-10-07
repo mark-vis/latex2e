@@ -236,6 +236,8 @@
 % \changes{v1.2k}{2026-10-06}{Caption interface: hook \texttt{caption/before},
 %    socket \texttt{caption/step}, switches \cs{if@captionstep} and
 %    \cs{if@captiontarget}}
+% \changes{v1.2k}{2026-10-06}{Hook \texttt{caption/prepare}, socket
+%    \texttt{caption/listentry}}
 %    \cs{caption}\oarg{list text}\marg{text} and
 %    \cs{caption*}\oarg{opt}\marg{text} process a caption in the
 %    following steps (inside a float, \meta{type} is the expansion of
@@ -254,8 +256,10 @@
 %      steps the counter.
 %    \item \cs{@caption}\marg{type}\oarg{list text}\marg{text} is called
 %      (the list text is the optional argument, or the text if it was
-%      not given). It does a \cs{par}, writes the list entry (not for
-%      \cs{caption*}), typesets the caption with \cs{@makecaption} and
+%      not given). It does a \cs{par}, executes the hook
+%      \hook{caption/prepare}, writes the list entry with the socket
+%      \texttt{caption/listentry} (not for \cs{caption*}), typesets the
+%      caption with \cs{@makecaption} and
 %      resets the switches \cs{if@captionstar}, \cs{if@captionstep} and
 %      \cs{if@captiontarget} to their defaults.
 %    \end{enumerate}
@@ -327,8 +331,8 @@
 %    so that rolling forward from an older format works. After a roll-back
 %    they stay defined but are not used.
 %
-% \paragraph{The hook \texttt{caption/before}.}
-%    A hook with four arguments:
+% \paragraph{The hooks \texttt{caption/before} and \texttt{caption/prepare}.}
+%    Two hooks with four arguments each:
 %    \begin{description}
 %    \item[\texttt{caption/before}] is executed by \cs{caption} once per
 %      caption (also for \cs{caption*}), after the star and the arguments
@@ -344,14 +348,24 @@
 %      e.g., for a continued float) or that no target should be created
 %      (\cs{@captiontargetfalse}, if the code makes its own target). The hook
 %      is not executed if \cs{@caption} is called directly.
+%    \item[\texttt{caption/prepare}] is executed by \cs{@caption} after the
+%      \cs{par} and before the list entry, for every call of \cs{@caption}
+%      (also for \cs{caption*} and for direct calls). The arguments are the
+%      type, the star state as above (from \cs{if@captionstar}), the list
+%      text and the caption text. At this point \cs{@currentlabel} is set
+%      and, if the step made a target, \cs{@currentHref} as well. This is
+%      the place for code that today wraps \cs{@caption}, e.g., to make a
+%      target of its own or to record the title of the caption for named
+%      references.
 %    \end{description}
-%    The hook is executed outside of any group the kernel makes.
+%    Both hooks are executed outside of any group the kernel makes.
 %    \begin{macrocode}
 %</2ekernel>
 %<*2ekernel|latexrelease>
 %<latexrelease>\IncludeInRelease{2026/11/01}%
 %<latexrelease>                 {\@kernel@caption@step}{caption interface}%
 \NewHookWithArguments{caption/before}{4}
+\NewHookWithArguments{caption/prepare}{4}
 %    \end{macrocode}
 %
 % \begin{socketdecl}{caption/step}
@@ -417,6 +431,32 @@
   \NewSocket{caption/step}{1}%
   \NewSocketPlug{caption/step}{kernel}{\@kernel@caption@step{#1}}%
   \AssignSocketPlug{caption/step}{kernel}%
+}
+%    \end{macrocode}
+% \end{plugdecl}
+%
+% \begin{socketdecl}{caption/listentry}
+%    This socket writes the entry for the list of figures, tables, etc.
+%    It is used by \cs{@caption} after the hook \hook{caption/prepare},
+%    unless the star form \cs{caption*} was used (\cs{if@captionstar}).
+%    The first argument is the caption type, the second the text for the
+%    list (the optional argument of \cs{caption}, or the caption text if
+%    it was not given), the third the caption text. The default plug
+%    \plug{kernel} writes the entry with \cs{addcontentsline} as before;
+%    it also writes an (empty) entry if the optional argument is empty.
+%    A package that wants to know whether the optional argument was
+%    given can record that in the hook \hook{caption/before}.
+% \end{socketdecl}
+% \begin{plugdecl}{kernel (caption/listentry)}
+%    \begin{macrocode}
+\IfSocketExistsF{caption/listentry}{%
+  \NewSocket{caption/listentry}{3}%
+  \NewSocketPlug{caption/listentry}{kernel}
+    {%
+      \addcontentsline{\csname ext@#1\endcsname}{#1}%
+        {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #2}}%
+    }%
+  \AssignSocketPlug{caption/listentry}{kernel}%
 }
 %    \end{macrocode}
 % \end{plugdecl}
@@ -547,20 +587,20 @@
 %    documented for code that makes the target of a caption itself or
 %    only needs its name (for example code that sets
 %    \cs{@captiontargetfalse} in the hook \hook{caption/before} and makes
-%    the anchor with
+%    the anchor in the hook \hook{caption/prepare} with
 %    |\@kernel@caption@unique{|\meta{type}|}{\hyper@makecurrent{|\meta{type}|}}|),
 %    so that it does not have to know how the names are counted:
 %    \begin{itemize}
 %    \item Every use takes a new number. Code that wants one name for
 %      one caption uses it once and keeps the result (e.g.,
 %      \cs{@currentHref}).
-%    \item In the hook \hook{caption/before} and in the plugs of the
-%      socket \texttt{caption/step} (and outside of captions)
+%    \item In the hooks \hook{caption/before} and \hook{caption/prepare}
+%      and in the plugs of the caption sockets (and outside of captions)
 %      \cs{theH}\meta{counter} has its normal meaning, and no number is
 %      reserved, so the numbers have no gaps. (A number that the kernel
 %      reserves for a replaced \cs{@caption}, see
 %      \cs{@caption@nostep@defs}, is given back at the start of the kernel
-%      \cs{@caption}.)
+%      \cs{@caption}, before \hook{caption/prepare}.)
 %    \item After a \cs{caption*} or a caption that does not step, if
 %      \cs{@caption} is a replaced one, \cs{theH}\meta{counter} has the
 %      unique form of that caption until the next \cs{caption} or the end
@@ -938,7 +978,7 @@
 %    it should not be used there. An optional argument is accepted; it
 %    is only passed to the
 %    hook \hook{caption/before} (and to \cs{@caption} as list text, which
-%    the kernel \cs{@caption} does not use for \cs{caption*}).
+%    the kernel \cs{@caption} only passes to \hook{caption/prepare}).
 %
 %    The star is read with \cs{@ifstar} and the optional argument with
 %    \cs{kernel@ifnextchar}, so spaces before them are skipped, as with
@@ -1013,7 +1053,7 @@
 %    gives a caption without label, without list entry and without a
 %    duplicate target, in the layout of the class. The settings are
 %    local and last until \cs{@caption@nostep@restore} is executed: at
-%    the start of the kernel \cs{@caption} (so its list entry and
+%    the start of the kernel \cs{@caption} (so its hook, list entry and
 %    typesetting see the normal definitions), at the start of the next
 %    \cs{caption}
 %    (with \cs{@kernel@caption@reset}), or at the end of the group; why,
@@ -1140,13 +1180,17 @@
 %      end with \cs{@kernel@caption@reset}}
 % \changes{v1.2k}{2026-10-06}
 %     {Undo the settings for a replaced \cs{@caption} before the \cs{par}}
+% \changes{v1.2k}{2026-10-06}
+%     {Hook \texttt{caption/prepare}; list entry with the socket
+%      \texttt{caption/listentry}}
 %    \cs{@caption}\marg{type}\oarg{list text}\marg{text} keeps its
 %    signature, so code that wraps or replaces it keeps working.
 %    The typesetting (with \cs{@parboxrestore} and \cs{@makecaption})
 %    is now done by \cs{@kernel@caption@typeset}. At the start the
 %    settings of \cs{@caption@nostep@defs} are undone, before the
-%    \cs{par}, so that the paragraph hooks, the output routine and the
-%    list entry and the typesetting see the normal definitions. At the end
+%    \cs{par}, so that the paragraph hooks, the output routine, the hook
+%    \hook{caption/prepare}, the list entry and the typesetting see the
+%    normal definitions. At the end
 %    \cs{@kernel@caption@reset} resets the switches (the settings are
 %    already undone by then), so that code which calls \cs{@caption} or
 %    the socket \texttt{caption/step} directly (without \cs{caption}) gets
@@ -1170,9 +1214,8 @@
   {#2}{#3}%
   \@kernel@caption@reset}
 \long\def\@caption@body#1#2#3#4{%
-  \IfBooleanF{#2}%
-    {\addcontentsline{\csname ext@#1\endcsname}{#1}%
-       {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #3}}}%
+  \UseHookWithArguments{caption/prepare}{4}{#1}{#2}{#3}{#4}%
+  \IfBooleanF{#2}{\UseSocket{caption/listentry}{#1}{#3}{#4}}%
   \@kernel@caption@typeset{#1}{#2}{#4}}
 %</2ekernel|latexrelease>
 %<latexrelease>\EndIncludeInRelease
