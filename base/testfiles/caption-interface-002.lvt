@@ -1,15 +1,16 @@
 % Roll-back of the caption interface: with latexrelease 2026-06-01 the
 % old \caption and \@caption are back, \@kernel@caption,
-% \@kernel@caption@reset and \@kernel@caption@unique are undefined, the
-% hooks are not executed, and
+% \@kernel@@caption, \@kernel@caption@reset and \@kernel@caption@unique
+% are undefined, the hooks are not executed, and
 % the guarded declarations give no errors.
 \RequirePackage[2026-06-01]{latexrelease}
 \documentclass{article}
 \input{regression-test}
 \makeatletter
 \def\showcommands{%
-  \typeout{\string\@kernel@caption:
-    \ifdefined\@kernel@caption defined\else undefined\fi,
+  \typeout{\string\@kernel@caption: \ifdefined\@kernel@caption
+    defined\else undefined\fi, \string\@kernel@@caption:
+    \ifdefined\@kernel@@caption defined\else undefined\fi,
     \string\@kernel@caption@reset:
     \ifdefined\@kernel@caption@reset defined\else undefined\fi,
     \string\@kernel@caption@unique:

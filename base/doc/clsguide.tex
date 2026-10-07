@@ -1552,9 +1552,9 @@ so that classes and packages do not need to redefine
 \end{verbatim}
 \item A class that redefines \cs{@caption} (for example to change the
   list entry or the spacing) should preferably use the hooks and sockets
-  of the caption interface instead, where they cover the change (for
-  example the socket \texttt{caption/listentry} for the list entry; see
-  the documentation of \texttt{ltfloat.dtx}). An
+  of the caption interface instead (hooks \texttt{caption/before},
+  \texttt{caption/prepare}; sockets \texttt{caption/listentry},
+  \texttt{caption/typeset}). An
   existing redefinition that typesets the label with
   \cs{fnum@}\meta{type}, writes the list entry with
   \verb|\addcontentsline{\csname ext@|\meta{type}\verb|\endcsname}|

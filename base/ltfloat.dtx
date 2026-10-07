@@ -238,6 +238,7 @@
 %    \cs{if@captiontarget}}
 % \changes{v1.2k}{2026-10-06}{Hook \texttt{caption/prepare}, socket
 %    \texttt{caption/listentry}}
+% \changes{v1.2k}{2026-10-06}{Socket \texttt{caption/typeset}}
 %    \cs{caption}\oarg{list text}\marg{text} and
 %    \cs{caption*}\oarg{opt}\marg{text} process a caption in the
 %    following steps (inside a float, \meta{type} is the expansion of
@@ -259,8 +260,8 @@
 %      not given). It does a \cs{par}, executes the hook
 %      \hook{caption/prepare}, writes the list entry with the socket
 %      \texttt{caption/listentry} (not for \cs{caption*}), typesets the
-%      caption with \cs{@makecaption} and
-%      resets the switches \cs{if@captionstar}, \cs{if@captionstep} and
+%      caption with the socket \texttt{caption/typeset} and resets the
+%      switches \cs{if@captionstar}, \cs{if@captionstep} and
 %      \cs{if@captiontarget} to their defaults.
 %    \end{enumerate}
 %    Code that calls \cs{@caption} directly (e.g., for sub-captions) gets
@@ -461,11 +462,44 @@
 %    \end{macrocode}
 % \end{plugdecl}
 %
+% \begin{socketdecl}{caption/typeset}
+%    This socket typesets the caption. It is used by \cs{@caption} for
+%    every caption, after the list entry. The arguments are the caption
+%    type, \cs{BooleanTrue} for \cs{caption*} or \cs{BooleanFalse}
+%    otherwise, and the caption text (without \cs{ignorespaces}).
+%
+%    A plug is used at the group level of the caller of \cs{@caption}
+%    (in a float the group of the float, with its \cs{linewidth}), outside
+%    of any group the kernel makes, and \cs{@parboxrestore} has not been
+%    executed yet. It has to do its own grouping; settings that it makes
+%    outside of its group are valid after the caption, so it should only
+%    make them on purpose. \cs{if@captionstar} is valid while it runs.
+%    A plug that typesets the caption with \cs{@makecaption} should pass
+%    \cs{@caption@nolabel} as first argument for \cs{caption*}, so that
+%    classes and the tagging code behave as with the default plug.
+%
+%    The default plug \plug{kernel} uses \cs{@kernel@caption@typeset}. A
+%    package that typesets captions completely (e.g., \pkg{caption}) or
+%    that has to redirect them can assign its own plug; there is one
+%    owner, the last assignment wins. A plug can fall back to
+%    \cs{@kernel@caption@typeset}.
+% \end{socketdecl}
+% \begin{plugdecl}{kernel (caption/typeset)}
+%    \begin{macrocode}
+\IfSocketExistsF{caption/typeset}{%
+  \NewSocket{caption/typeset}{3}%
+  \NewSocketPlug{caption/typeset}{kernel}
+    {\@kernel@caption@typeset{#1}{#2}{#3}}%
+  \AssignSocketPlug{caption/typeset}{kernel}%
+}
+%    \end{macrocode}
+% \end{plugdecl}
+%
 % \begin{macro}{\if@captionstar,\if@captionstep,\if@captiontarget}
 %    \cs{if@captionstar} is true while a caption made by \cs{caption*} is
 %    processed: from the start of \cs{caption*} until the end of
-%    \cs{@caption}, so also in the caption hooks and in \cs{@makecaption}.
-%    In that case the first
+%    \cs{@caption}, so also in the hooks, in the plugs of
+%    \texttt{caption/typeset} and in \cs{@makecaption}. In that case the first
 %    argument of \cs{@makecaption} is \cs{@caption@nolabel} (or, if
 %    \cs{@caption} has been replaced, \cs{fnum@}\meta{type}, which is then
 %    \cs{@caption@nolabel}), and a \cs{@makecaption} can test this switch
@@ -585,9 +619,9 @@
 %    as those of the kernel's own targets for such captions, so a name
 %    made in this way and a kernel target never collide. It is
 %    documented for code that makes the target of a caption itself or
-%    only needs its name (for example code that sets
-%    \cs{@captiontargetfalse} in the hook \hook{caption/before} and makes
-%    the anchor in the hook \hook{caption/prepare} with
+%    only needs its name (for example the \pkg{caption} package, which
+%    sets \cs{@captiontargetfalse} and makes its anchor in the hook
+%    \hook{caption/prepare} with
 %    |\@kernel@caption@unique{|\meta{type}|}{\hyper@makecurrent{|\meta{type}|}}|),
 %    so that it does not have to know how the names are counted:
 %    \begin{itemize}
@@ -693,7 +727,9 @@
 % \begin{macro}{\@kernel@caption@typeset}
 %    \cs{@kernel@caption@typeset}\marg{type}\marg{star}\marg{text} is the
 %    typesetting of the kernel: the previous code of \cs{@caption},
-%    with the label \cs{@caption@nolabel} for \cs{caption*}.
+%    with the label \cs{@caption@nolabel} for \cs{caption*}. It is
+%    documented, so that a plug of \texttt{caption/typeset} can fall back
+%    to it.
 %    \begin{macrocode}
 \long\def\@kernel@caption@typeset#1#2#3{%
   \begingroup
@@ -1053,9 +1089,8 @@
 %    gives a caption without label, without list entry and without a
 %    duplicate target, in the layout of the class. The settings are
 %    local and last until \cs{@caption@nostep@restore} is executed: at
-%    the start of the kernel \cs{@caption} (so its hook, list entry and
-%    typesetting see the normal definitions), at the start of the next
-%    \cs{caption}
+%    the start of the kernel \cs{@caption} (so its hooks and plugs see
+%    the normal definitions), at the start of the next \cs{caption}
 %    (with \cs{@kernel@caption@reset}), or at the end of the group; why,
 %    is explained below.
 %    \cs{addcontentsline} itself is not changed, so an
@@ -1183,14 +1218,16 @@
 % \changes{v1.2k}{2026-10-06}
 %     {Hook \texttt{caption/prepare}; list entry with the socket
 %      \texttt{caption/listentry}}
+% \changes{v1.2k}{2026-10-06}
+%     {Typesetting with the socket \texttt{caption/typeset}}
 %    \cs{@caption}\marg{type}\oarg{list text}\marg{text} keeps its
 %    signature, so code that wraps or replaces it keeps working.
 %    The typesetting (with \cs{@parboxrestore} and \cs{@makecaption})
-%    is now done by \cs{@kernel@caption@typeset}. At the start the
-%    settings of \cs{@caption@nostep@defs} are undone, before the
-%    \cs{par}, so that the paragraph hooks, the output routine, the hook
-%    \hook{caption/prepare}, the list entry and the typesetting see the
-%    normal definitions. At the end
+%    is now done by the plug of \texttt{caption/typeset}, see
+%    \cs{@kernel@caption@typeset}. At the start the settings of
+%    \cs{@caption@nostep@defs} are undone, before the \cs{par}, so that
+%    the paragraph hooks, the output routine and the hooks and plugs of
+%    the caption see the normal definitions. At the end
 %    \cs{@kernel@caption@reset} resets the switches (the settings are
 %    already undone by then), so that code which calls \cs{@caption} or
 %    the socket \texttt{caption/step} directly (without \cs{caption}) gets
@@ -1216,7 +1253,7 @@
 \long\def\@caption@body#1#2#3#4{%
   \UseHookWithArguments{caption/prepare}{4}{#1}{#2}{#3}{#4}%
   \IfBooleanF{#2}{\UseSocket{caption/listentry}{#1}{#3}{#4}}%
-  \@kernel@caption@typeset{#1}{#2}{#4}}
+  \UseSocket{caption/typeset}{#1}{#2}{#4}}
 %</2ekernel|latexrelease>
 %<latexrelease>\EndIncludeInRelease
 %<latexrelease>\IncludeInRelease{0000/00/00}%
@@ -1239,16 +1276,21 @@
 % \end{macro}
 % \end{macro}
 %
-% \begin{macro}{\@kernel@caption,\@kernel@caption@unique}
+% \begin{macro}{\@kernel@caption,\@kernel@caption@unique,\@kernel@@caption}
 % \changes{v1.2k}{2026-10-06}{Macro \cs{@kernel@caption} added}
 % \changes{v1.2k}{2026-10-06}{Macro \cs{@kernel@caption@unique} added}
+% \changes{v1.2k}{2026-10-06}{Macro \cs{@kernel@@caption} added}
 %    \cs{@kernel@caption} is a copy of the kernel definition of
 %    \cs{caption} (the naming follows \cs{@kernel@refstepcounter}). Code
 %    that keeps its own \cs{caption} can pass \cs{caption*} to it (with
 %    \verb|\@ifstar{\@kernel@caption*}{|\ldots\verb|}|), and code that
 %    has replaced \cs{caption} can restore it.
 %    \cs{@kernel@caption@unique} is the documented name of
-%    \cs{@caption@uniquedo} (see above).
+%    \cs{@caption@uniquedo} (see above). \cs{@kernel@@caption} is a copy
+%    of the kernel definition of \cs{@caption}: a package that has always
+%    replaced \cs{caption} and \cs{@caption} (e.g., at
+%    |\begin{document}|) can restore both and then use the hooks and
+%    sockets above.
 %
 %    They are defined only if the kernel has the caption interface: after
 %    a roll-back with \pkg{latexrelease} to an earlier date they are
@@ -1265,12 +1307,14 @@
 %<latexrelease>                 {\@kernel@caption}{caption interface copies}%
 \let\@kernel@caption\caption
 \let\@kernel@caption@unique\@caption@uniquedo
+\let\@kernel@@caption\@caption
 %</2ekernel|latexrelease>
 %<latexrelease>\EndIncludeInRelease
 %<latexrelease>\IncludeInRelease{0000/00/00}%
 %<latexrelease>                 {\@kernel@caption}{caption interface copies}%
 %<latexrelease>\let\@kernel@caption\@undefined
 %<latexrelease>\let\@kernel@caption@unique\@undefined
+%<latexrelease>\let\@kernel@@caption\@undefined
 %<latexrelease>\EndIncludeInRelease
 %<*2ekernel>
 %    \end{macrocode}
