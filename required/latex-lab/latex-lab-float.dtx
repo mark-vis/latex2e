@@ -721,16 +721,42 @@
 % These sockets are in lttagging: \texttt{caption/begin} (1 argument),
 % \texttt{caption/end}, \texttt{caption/label/begin}, \texttt{caption/label/end}.
 %
-% \begin{socketdecl}{caption/label}
-% This socket is a lightweight start for
-% some interface to format the label or add a font command.
-% The argument is the label text.
-% The default plug \texttt{kernel} adds a colon
-% and a space.
-% TODO: revisit after checking float and caption packages
-% to identify which sockets and hooks are needed.
+% \begin{socketdecl}{caption/label,caption/separator}
+% \changes{0.81q}{2026-10-06}{Document the contract of \texttt{caption/label},
+%   add socket \texttt{caption/separator}}
+% These sockets format the label of a caption and the separator between
+% the label and the caption text. They are used by \cs{@makecaption}
+% (and can be used by other code which typesets captions, e.g., the
+% \pkg{caption} package):
+% \begin{itemize}
+% \item The argument of \texttt{caption/label} is the first argument of
+%   \cs{@makecaption}, i.e., \cs{fnum@\meta{type}} or the tokens
+%   |\csname fnum@|\meta{type}|\endcsname|. \texttt{caption/separator} has no
+%   argument; the caption type is \cs{@captype}.
+% \item Both are used more than once: while measuring the caption
+%   (tagging is suspended there; \texttt{caption/label} also for the test
+%   whether the label is empty) and once for typesetting. They must give
+%   the same result every time, must not write to files or step counters,
+%   and must only produce horizontal material.
+% \item \texttt{caption/label} is used between the tagging sockets
+%   \texttt{caption/label/begin} and \texttt{caption/label/end}, so its
+%   output is the content of the \texttt{Lbl} structure.
+%   \texttt{caption/separator} is used after \texttt{caption/label/end}
+%   and \texttt{para/begin}, so its output belongs to the text of the
+%   caption.
+% \end{itemize}
+% The default plugs are \plug{kernel} for both: \texttt{caption/label}
+% adds a colon and a space (so they are part of \texttt{Lbl}, as before),
+% \texttt{caption/separator} is empty. The plugs \plug{label-only} and
+% \plug{colon} put the colon outside \texttt{Lbl}. Classes and packages which
+% assign their own plug to \texttt{caption/label} only keep working as
+% before, as long as \texttt{caption/separator} has its default plug.
+% Code which suppresses the label (by assigning \plug{noop} to
+% \texttt{caption/label}, e.g., for listing titles or \cs{caption*}) must
+% assign \plug{noop} to \texttt{caption/separator} as well.
 %    \begin{macrocode}
 \NewSocket{caption/label}{1}
+\NewSocket{caption/separator}{0}
 %    \end{macrocode}
 % \end{socketdecl}
 %
@@ -742,6 +768,16 @@
    #1:~
  }
 \AssignSocketPlug{caption/label}{kernel}
+\NewSocketPlug{caption/label}{label-only}
+ {
+   #1
+ }
+\NewSocketPlug{caption/separator}{kernel}{}
+\AssignSocketPlug{caption/separator}{kernel}
+\NewSocketPlug{caption/separator}{colon}
+ {
+   :~
+ }
 %    \end{macrocode}
 % \end{plugdecl}
 % \begin{macro}{\@@_float_name:n}
@@ -771,6 +807,11 @@
 % \begin{plugdecl}{default}
 % The caption begin socket takes an argument: the structure number of
 % the parent float. If the argument is empty, the current structure is used.
+% \changes{0.81q}{2026-10-06}{Record the structure number of the caption}
+% The number of the caption structure is recorded (globally) in
+% \cs{g_@@_caption_struct_tl}, so that the label sockets can tell whether
+% the caption paragraph has started (see below); \texttt{caption/end}
+% clears it.
 % TODO: a tagpdf key that moves a structure to the begin of the parent.
 % The caption is moved to the first position with the firstkid option.
 %    \begin{macrocode}
@@ -783,6 +824,7 @@
       {
         \tag_struct_begin:n{tag=\UseStructureName{\@@_float_name:n{caption}},parent=#1,firstkid}
       }
+     \tl_gset:Ne \g_@@_caption_struct_tl { \tag_get:n{struct_num} }
      \bool_set_true:N \l__tag_para_flattened_bool
   }
 \AssignTaggingSocketPlug{caption/begin}{default}
@@ -793,19 +835,56 @@
 \NewTaggingSocketPlug{caption/end}{default}
   {
     \tag_struct_end:
+    \tl_gclear:N \g_@@_caption_struct_tl
   }
 \AssignTaggingSocketPlug{caption/end}{default}
 %    \end{macrocode}
 % \end{plugdecl}
 %
 % \begin{plugdecl}{default (tagsupport/caption/label/begin)}
+% \changes{0.81q}{2026-10-06}{Allow the label sockets inside a paragraph}
+% The label sockets can be used before the paragraph of the caption
+% starts (as in \cs{@makecaption}) or inside it, when a marked content
+% chunk of the paragraph is open (as in the \pkg{caption} package, which
+% typesets the label as part of the caption paragraph). In the second case the
+% chunk is interrupted for the label and continued after it.
+% An open chunk alone does not show that the label is inside the caption
+% paragraph: the caption can be typeset in a box inside another paragraph
+% (\pkg{threeparttable} puts the whole table into a \cs{vtop} after a
+% \cs{noindent}), and then the open chunk belongs to that other paragraph.
+% Before the caption paragraph starts, the current structure is the
+% caption structure made by \texttt{caption/begin}; inside the paragraph it
+% is the structure of the paragraph. So the label is taken as inside the
+% paragraph only if a chunk is open and the current structure is not the
+% caption structure recorded by \texttt{caption/begin}. This needs nothing
+% from the code that uses the sockets: \cs{@makecaption} below, a class
+% with its own \cs{@makecaption} (see there) and the \pkg{caption} package
+% are told apart in the same way.
 %    \begin{macrocode}
+\bool_new:N \g_@@_caption_label_inpar_bool
+\tl_new:N \g_@@_caption_struct_tl
+\prg_new_conditional:Npnn \@@_caption_label_if_inpar: { TF }
+  {
+    \bool_lazy_and:nnTF
+      { \tag_mc_if_in_p: }
+      { ! \str_if_eq_p:ee { \tag_get:n{struct_num} } { \g_@@_caption_struct_tl } }
+      { \prg_return_true: }
+      { \prg_return_false: }
+  }
 \NewTaggingSocketPlug{caption/label/begin}{default}
   {
+    \@@_caption_label_if_inpar:TF
+      {
+        \bool_gset_true:N \g_@@_caption_label_inpar_bool
+        \tag_mc_end_push:
+      }
+      {
 %    \end{macrocode}
 % suppress para tagging at the begin.
 %    \begin{macrocode}
-     \tagpdfparaOff
+        \bool_gset_false:N \g_@@_caption_label_inpar_bool
+        \tagpdfparaOff
+      }
      \tag_struct_begin:n{tag=\UseStructureName{\@@_float_name:n{label}}}
      \tag_mc_begin:n{}
   }
@@ -819,7 +898,9 @@
   {
     \tag_mc_end:
     \tag_struct_end:
-    \tagpdfparaOn
+    \bool_if:NTF \g_@@_caption_label_inpar_bool
+      { \tag_mc_begin_pop:n{} }
+      { \tagpdfparaOn }
   }
 \AssignTaggingSocketPlug{caption/label/end}{default}
 %    \end{macrocode}
@@ -829,20 +910,29 @@
 % \begin{plugdecl}{nolabel (tagsupport/caption/label/end)}
 % \changes{0.81q}{2026-10-06}{Plugs \texttt{nolabel} for \cs{caption*}}
 % For a caption without a label (\cs{caption*}): no \texttt{Lbl} structure,
-% but the paragraph is handled as with a label. The paragraph is started
-% without para tagging, so that the following \texttt{para/begin} socket
-% starts the only \texttt{P} (with the plugs \plug{noop} the paragraph would
-% be started by the caption text after \texttt{para/begin}, which gave a
-% second \texttt{P} and unbalanced para hooks).
+% but the paragraph is handled as with a label. If the sockets are used
+% before the caption paragraph starts, the paragraph is started without
+% para tagging, so that the following \texttt{para/begin} socket starts the
+% only \texttt{P} (with the plugs \plug{noop} the paragraph would be started
+% by the caption text after \texttt{para/begin}, which gave a second
+% \texttt{P} and unbalanced para hooks). Inside the paragraph they do nothing.
 %    \begin{macrocode}
 \NewTaggingSocketPlug{caption/label/begin}{nolabel}
   {
-    \tagpdfparaOff
+    \@@_caption_label_if_inpar:TF
+      { \bool_gset_true:N \g_@@_caption_label_inpar_bool }
+      {
+        \bool_gset_false:N \g_@@_caption_label_inpar_bool
+        \tagpdfparaOff
+      }
   }
 \NewTaggingSocketPlug{caption/label/end}{nolabel}
   {
-    \leavevmode
-    \tagpdfparaOn
+    \bool_if:NF \g_@@_caption_label_inpar_bool
+      {
+        \leavevmode
+        \tagpdfparaOn
+      }
   }
 %    \end{macrocode}
 % \end{plugdecl}
@@ -864,9 +954,34 @@
 % \cs{@makecaption} is defined by the classes so we overwrite it for now
 % at begin document.
 % \changes{0.81k}{2025-10-11}{Add command hook explicitly to avoid patching error, tagging issue 998}
+% \changes{0.81q}{2026-10-06}{Document the label \texttt{latex-lab-testphase-float}
+%   of this code}
+% The code is added with the label \texttt{latex-lab-testphase-float}
+% (the default label of this package). This label is kept for
+% compatibility, because classes already use it to remove the code
+% (\cls{acmart}, \cls{asmejour}, \cls{asmeconf}, \cls{mitthesis}); a
+% dedicated interface may replace it when this code moves into the
+% kernel. Other code that this package adds to \hook{begindocument}
+% should use an explicit label of its own, so that it is not removed or
+% voided together with this code. A
+% class or package which provides its own \cs{@makecaption} with tagging
+% support (using the sockets \texttt{caption/begin}, \texttt{caption/end},
+% \texttt{caption/label/begin}, \texttt{caption/label/end} and
+% \texttt{para/begin}, \texttt{para/end}; it needs nothing else, also if the
+% caption is in a box inside a paragraph) can keep its definition with
+% a rule (preferred, as it does not fail if the code has already been
+% removed or is not there)
+% \begin{verbatim}
+% \DeclareHookRule{begindocument}{<own label>}{voids}{latex-lab-testphase-float}
+% \end{verbatim}
+% where \meta{own label} is the label of code that it adds to
+% \hook{begindocument} itself, or with
+% \begin{verbatim}
+% \RemoveFromHook{begindocument}[latex-lab-testphase-float]
+% \end{verbatim}
 %    \begin{macrocode}
 \NewHookWithArguments{cmd/@makecaption/before}{2}
-\AddToHook{begindocument}
+\AddToHook{begindocument}[latex-lab-testphase-float]
   {
     \long\def\@makecaption#1#2{%
       \UseHookWithArguments{cmd/@makecaption/before}{2}{#1}{#2}%
@@ -881,6 +996,7 @@
       \legacy_if:nT { @captionstar }
         {
           \AssignSocketPlug{caption/label}{noop}
+          \AssignSocketPlug{caption/separator}{noop}
           \AssignTaggingSocketPlug{caption/label/begin}{nolabel}
           \AssignTaggingSocketPlug{caption/label/end}{nolabel}
         }
@@ -889,7 +1005,29 @@
 % \changes{0.81l}{2025-10-17}{Measure \texttt{caption/label} socket instead of hard-coded colon and space, tagging issue 935}
 %    \begin{macrocode}
       \SuspendTagging{\@makecaption}
-      \sbox\@tempboxa{\UseSocket{caption/label}{#1}#2}%
+%    \end{macrocode}
+% \changes{0.81q}{2026-10-06}{An empty label gets the plugs \texttt{nolabel}
+%   of the label tagging sockets (gh/2022)}
+% A label that typesets nothing (a plug \plug{noop} of
+% \texttt{caption/label}, or a label of size zero) gets the plugs
+% \plug{nolabel} of the label tagging sockets as well, as for \cs{caption*}:
+% no empty \texttt{Lbl} structure, and in a wide caption only one
+% \texttt{P} (with the default plugs the paragraph was started by the
+% caption text after \texttt{para/begin}, which gave unbalanced para hooks,
+% latex3/latex2e\#2022).
+%    \begin{macrocode}
+      \sbox\@tempboxa{\UseSocket{caption/label}{#1}}%
+      \bool_lazy_and:nnT
+        { \dim_compare_p:nNn { \box_wd:N \@tempboxa } = \c_zero_dim }
+        {
+          \dim_compare_p:nNn
+            { \box_ht:N \@tempboxa + \box_dp:N \@tempboxa } = \c_zero_dim
+        }
+        {
+          \AssignTaggingSocketPlug{caption/label/begin}{nolabel}
+          \AssignTaggingSocketPlug{caption/label/end}{nolabel}
+        }
+      \sbox\@tempboxa{\UseSocket{caption/label}{#1}\UseSocket{caption/separator}#2}%
       \ResumeTagging{\@makecaption}
 %    \end{macrocode}
 % We pass \cs{@current@float@struct} as parent structure
@@ -901,6 +1039,7 @@
       \UseSocket{caption/label}{#1}
       \UseTaggingSocket{caption/label/end}
       \UseTaggingSocket{para/begin}
+      \UseSocket{caption/separator}
           #2
       \par
       \else
@@ -913,6 +1052,7 @@
          \UseSocket{caption/label}{#1}
          \UseTaggingSocket{caption/label/end}
          \UseTaggingSocket{para/begin}
+         \UseSocket{caption/separator}
           #2
          \UseTaggingSocket{para/end}
          \hfil}%

@@ -1,6 +1,20 @@
 2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
 
 	* latex-lab-float.dtx:
+	Document the contract of the caption/label socket, add socket
+	caption/separator and plugs label-only and colon (no separator for
+	\caption*); allow the label tagging sockets inside the caption
+	paragraph (recognized by the structure: a caption in a box inside
+	another paragraph, as in threeparttable, is not taken as being inside
+	its own paragraph); an empty label gets the plugs nolabel of the label
+	tagging sockets (gh/2022); document the label
+	latex-lab-testphase-float of the begindocument redefinition of
+	\@makecaption (classes remove it by this label)
+
+	* latex-lab-listings.dtx:
+	Void the socket caption/separator for titles
+
+	* latex-lab-float.dtx:
 	Store the float target in \@floatHref@<type> at the float start and
 	in float/split, and remove the plug latex-lab of caption/step (the
 	kernel plug uses the float target): a caption after float/split used

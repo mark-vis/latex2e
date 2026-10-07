@@ -992,12 +992,20 @@
 %
 % \begin{taggingsocketdecl}{caption/label/begin,
 %                    caption/label/end}
+% \changes{v1.1b}{2026-10-06}{Label sockets can also be used inside the
+%    caption paragraph}
 %  These sockets are used in \cs{@makecaption} around the
-%  label. Their default plugs ensure that
+%  label. If they are used before the caption paragraph starts (as in
+%  \cs{@makecaption}), their default plugs ensure that
 %  the label is outside the paragraph and that
 %  the rest of the caption uses flattened para mode. If the
 %  caption is not in a hbox, the \texttt{para/begin}
 %  socket should follow to properly start the paragraph.
+%  They can also be used inside the caption paragraph (when a marked
+%  content chunk is open, e.g., by the \pkg{caption} package, which
+%  typesets the label as part of the paragraph). Then the label
+%  becomes a child of the paragraph structure, and the
+%  \texttt{para/begin} socket must not follow.
 %    \begin{macrocode}
 \NewTaggingSocket{caption/label/begin}{0}
 \NewTaggingSocket{caption/label/end}{0}
