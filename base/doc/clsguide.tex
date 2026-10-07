@@ -1546,16 +1546,35 @@ so that classes and packages do not need to redefine
 \item A class that redefines \cs{@caption} (for example to change the
   list entry or the spacing) should preferably use the hooks and sockets
   of the caption interface instead, where they cover the change (see the
-  documentation of \texttt{ltfloat.dtx}). A redefinition that does not
-  test \cs{if@captionstar} gives \cs{caption*} the label and the list
-  entry of a numbered caption, with the number of the previous caption.
+  documentation of \texttt{ltfloat.dtx}). An
+  existing redefinition that typesets the label with
+  \cs{fnum@}\meta{type}, writes the list entry with
+  \verb|\addcontentsline{\csname ext@|\meta{type}\verb|\endcsname}|
+  and makes a link target from \cs{theH}\meta{type} (if at all), as the
+  kernel and \pkg{hyperref} did before, gives a correct \cs{caption*}
+  without changes: for \cs{caption*} the kernel lets
+  \cs{fnum@}\meta{type} be the label described above, makes
+  \cs{ext@}\meta{type} empty and gives \cs{theH}\meta{type} a unique
+  suffix, until the next \cs{caption} or the end of the group (so also if
+  the redefinition defers its work). For a caption that does not step
+  its counter (a continued float) only the unique suffix is used. A
+  redefinition can also test \cs{if@captionstar} itself, and one that
+  defers its work should do so before it defers. As the switch also
+  stays true until the next \cs{caption} or the end of the group, a
+  redefinition that tests it (or whose \cs{@makecaption} does) should
+  set it false at its end (\cs{@captionstarfalse}); otherwise a later
+  \cs{@makecaption} in the same float, for example for a listing, would
+  omit its label as well.
 \item A class or package that redefines \cs{caption} itself takes over
   the star as well: unless it handles it (no counter step, no list entry,
   \cs{@caption@nolabel} as label for \cs{@makecaption} with
   \cs{if@captionstar} true),
   \verb|\caption*{Text}| gives a numbered caption with the text `*' and a
   list entry, followed by `Text'. It is better to keep the kernel
-  definition and to use the hooks and sockets.
+  definition and to use the hooks and sockets. Code that keeps its own
+  \cs{caption} and passes only \cs{caption*} to the kernel (to
+  \cs{@kernel@caption}, the copy of the kernel \cs{caption}) must start
+  its own numbered \cs{caption} with \cs{@kernel@caption@reset}.
 \end{itemize}
 
 

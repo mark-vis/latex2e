@@ -244,7 +244,8 @@
 %    \item The generic hook \hook{cmd/caption/before} (as for every
 %      command; it is executed before anything else).
 %    \item Outside of a float an error is raised (as before).
-%    \item \cs{@kernel@caption@reset} sets the switches
+%    \item \cs{@kernel@caption@reset} undoes what an earlier caption in
+%      the same group may have left (see below) and sets the switches
 %      \cs{if@captionstar}, \cs{if@captionstep} and \cs{if@captiontarget}
 %      to their defaults. Then the star and the arguments are read. An
 %      absent optional argument is \cs{NoValue}.
@@ -275,10 +276,21 @@
 %      \cs{@caption@nolabel} while \cs{if@captionstar} is true.
 %    \item With the kernel \cs{caption} and an \cs{@caption} that a class
 %      or package has replaced by a definition that does not know the
-%      star (\cls{llncs}, \cls{mwart}, \ldots): that
-%      definition typesets the label \cs{fnum@}\meta{type} with the number
-%      of the previous caption and writes a list entry, unless it tests
-%      \cs{if@captionstar}.
+%      star (\cls{llncs}, \cls{mwart}, \ldots): the kernel
+%      lets \cs{fnum@}\meta{type} be \cs{@caption@nolabel}, makes
+%      \cs{ext@}\meta{type} empty (so \cs{addcontentsline} writes to no
+%      list) and gives \cs{theH}\meta{type} a unique suffix (so a target
+%      that the definition makes has a new name), until the next
+%      \cs{caption} or the end of the group (see
+%      \cs{@caption@nostep@defs}). Such a definition, if it uses these
+%      commands as the kernel did, then also gives a caption without
+%      label, without list entry and without a duplicate target, in the
+%      layout of the class, also if it defers the typesetting
+%      (\pkg{threeparttable} does that for a caption above the table).
+%      \cs{if@captionstar} is true until the same point. For a caption
+%      that does not step its counter for another reason
+%      (\cs{@captionstepfalse}, a continued float) only the unique
+%      suffix is used.
 %    \item The class's \cs{@makecaption} decides how the caption looks.
 %      The contract is: \cs{if@captionstar} is true, and the label (the
 %      first argument) is \cs{@caption@nolabel}, never empty. A
@@ -404,9 +416,17 @@
 %    processed: from the start of \cs{caption*} until the end of
 %    \cs{@caption}, so also in the caption hooks and in \cs{@makecaption}.
 %    In that case the first
-%    argument of \cs{@makecaption} is \cs{@caption@nolabel}, and a
-%    \cs{@makecaption} can test this switch to omit the label and its
-%    separator. Code
+%    argument of \cs{@makecaption} is \cs{@caption@nolabel} (or, if
+%    \cs{@caption} has been replaced, \cs{fnum@}\meta{type}, which is then
+%    \cs{@caption@nolabel}), and a \cs{@makecaption} can test this switch
+%    to omit the label and its separator. If \cs{@caption} is not
+%    the kernel's, the switch stays true until the next \cs{caption} or
+%    the end of the current group, as the settings of
+%    \cs{@caption@nostep@defs}, because that \cs{@caption} may defer its
+%    work. Such an \cs{@caption} that tests the switch itself (or whose
+%    \cs{@makecaption} does) should therefore set it false at its end;
+%    otherwise a later \cs{@makecaption} in the same group (for example
+%    for the caption of a listing) would omit its label as well. Code
 %    that calls \cs{@caption} directly can set it true before the
 %    call.
 %
@@ -449,7 +469,7 @@
 % \begin{macro}{\@kernel@caption@step,\@kernel@caption@unique}
 % \begin{macro}{\@caption@target,\@caption@newtarget,\@caption@floattarget,
 %                \@caption@uniquetarget,\@caption@uniquedo,\@caption@uniqueH,
-%                \@caption@uniqueH@from,\@caption@noH}
+%                \@caption@uniqueH@from,\@caption@Htype,\@caption@noH}
 %    \cs{@kernel@caption@step}\marg{counter} implements the contract of
 %    the socket \texttt{caption/step}. It is not \cs{refstepcounter},
 %    because the counter is not always stepped and the target not always
@@ -527,7 +547,16 @@
 %    \item In the hook \hook{caption/before} and in the plugs of the
 %      socket \texttt{caption/step} (and outside of captions)
 %      \cs{theH}\meta{counter} has its normal meaning, and no number is
-%      reserved, so the numbers have no gaps.
+%      reserved, so the numbers have no gaps. (A number that the kernel
+%      reserves for a replaced \cs{@caption}, see
+%      \cs{@caption@nostep@defs}, is given back at the start of the kernel
+%      \cs{@caption}.)
+%    \item After a \cs{caption*} or a caption that does not step, if
+%      \cs{@caption} is a replaced one, \cs{theH}\meta{counter} has the
+%      unique form of that caption until the next \cs{caption} or the end
+%      of the group (see \cs{@caption@nostep@defs}). The command can also
+%      be used there: the name is made from the normal meaning, which is
+%      saved, so it is the next unique name after that of the caption.
 %    \item The command adds no group: assignments in \meta{code} survive,
 %      also local ones (such as \cs{@currentHref} with the \pkg{hyperref}
 %      option \texttt{localanchorname}). Afterwards
@@ -569,9 +598,27 @@
 %    \cs{protected@edef}, only to tell names apart), and
 %    \cs{@caption@H@n@}\meta{name} holds the last \meta{n} used for it,
 %    globally, so the numbering does not depend on captions elsewhere.
+%
+%    While the settings of \cs{@caption@nostep@defs} for the same counter
+%    are active (\cs{@caption@nostep@restore} is not \cs{relax}),
+%    \cs{theH}\meta{counter} is already the unique form and refers to
+%    \cs{@caption@H@}\meta{counter}; taking it as the previous meaning
+%    would let that command refer to itself (an endless loop when the name
+%    is expanded). Then the meaning saved by \cs{@caption@nostep@defs}
+%    (\cs{@caption@saved@H}) is used. For \cs{@caption@nostep@defs} itself
+%    it is the same as the current one.
 %    \begin{macrocode}
 \def\@caption@uniqueH#1{%
-  \@caption@uniqueH@from{theH#1}{#1}%
+  \edef\@caption@Htype{#1}%
+  \ifx\@caption@nostep@restore\relax
+    \@caption@uniqueH@from{theH#1}{#1}%
+  \else
+    \ifx\@caption@Htype\@caption@nostep@type
+      \@caption@uniqueH@from{@caption@saved@H}{#1}%
+    \else
+      \@caption@uniqueH@from{theH#1}{#1}%
+    \fi
+  \fi
   \protected@edef\@caption@Hname{#1.\csname @caption@H@#1\endcsname}%
   \edef\@caption@Hname{\detokenize\expandafter{\@caption@Hname}}%
   \@ifundefined{@caption@H@n@\@caption@Hname}%
@@ -659,7 +706,9 @@
 %
 % \begin{macro}{\caption}
 % \begin{macro}{\@caption@args,\@caption@read,\@caption@process}
-% \begin{macro}{\@kernel@caption@reset}
+% \begin{macro}{\@caption@nostep@defs,\@caption@nostep@restore,
+%                \@caption@nostep@giveback,\@caption@uniqueH@back,
+%                \@caption@nostep@type,\@kernel@caption@reset}
 % \begin{macro}{\@caption@skip,\@caption@skip@star,\@caption@skip@args,
 %                \@caption@skip@opt}
 %
@@ -678,6 +727,8 @@
 %    {Add star form; read the arguments without \cs{@dblarg}; hook
 %     \texttt{caption/before}; step the counter through the socket
 %     \texttt{caption/step}; \cs{@kernel@caption@reset}}
+% \changes{v1.2k}{2026-10-06}
+%    {Settings for a replaced \cs{@caption} until the next caption}
 %
 %    The star form \cs{caption*} typesets a caption without a label:
 %    it does not step the counter, sets no target and writes no list
@@ -728,23 +779,130 @@
     \expandafter\@secondoftwo
   \fi
   {\UseHookWithArguments{caption/before}{4}{#1}{\BooleanTrue}{#2}{#3}%
+   \@caption@nostep@defs{#1}%
    \IfNoValueTF{#2}%
      {\@caption{#1}[{#3}]{#3}}%
      {\@caption{#1}[{#2}]{#3}}}%
   {\UseHookWithArguments{caption/before}{4}{#1}{\BooleanFalse}{#2}{#3}%
    \UseSocket{caption/step}{#1}%
+   \if@captionstep\else
+     \@caption@nostep@defs{#1}%
+   \fi
    \IfNoValueTF{#2}%
      {\@caption{#1}[{#3}]{#3}}%
      {\@caption{#1}[{#2}]{#3}}}}
 %    \end{macrocode}
-%    \cs{@kernel@caption@reset} sets \cs{if@captionstar} false and
-%    \cs{if@captionstep} and \cs{if@captiontarget} true, which is the state
-%    outside of a caption. The kernel \cs{caption} starts with it and the
-%    kernel \cs{@caption} ends with it. It is defined together with
-%    \cs{caption} (also by \pkg{latexrelease}), so after a roll-back to an
-%    earlier date it is undefined, as \cs{@kernel@caption}.
+%    \cs{@caption@nostep@defs}\marg{type} prepares the definitions for a
+%    caption that does not step its counter (\cs{caption*}, or
+%    \cs{@captionstepfalse} for a continued float), in case \cs{@caption}
+%    is not the kernel's. A class or package may have replaced
+%    \cs{@caption} by a definition that does not know the star or the
+%    switches (\cls{llncs}, \cls{mwart} and others): it would typeset the
+%    label with the number of the previous caption, write a list entry
+%    and, with \pkg{hyperref}, make a target with the name of the previous
+%    caption (\cls{mwart} does that with \cs{hyper@makecurrent}). So:
+%    \begin{itemize}
+%    \item \cs{theH}\meta{type} gets a unique suffix (see
+%      \cs{@caption@uniqueH}), so a target made from it has a new name;
+%    \item for \cs{caption*} also \cs{fnum@}\meta{type} is
+%      \cs{@caption@nolabel} (the same label as from the kernel, and
+%      \cs{if@captionstar} is true) and \cs{ext@}\meta{type} is empty, so
+%      that \cs{addcontentsline} writes to no list.
+%    \end{itemize}
+%    Such a definition, if it uses these commands as the kernel did, then
+%    gives a caption without label, without list entry and without a
+%    duplicate target, in the layout of the class. The settings are
+%    local and last until \cs{@caption@nostep@restore} is executed: at
+%    the start of the kernel \cs{@caption} (so its list entry and
+%    typesetting see the normal definitions), at the start of the next
+%    \cs{caption}
+%    (with \cs{@kernel@caption@reset}), or at the end of the group; why,
+%    is explained below.
+%    \cs{addcontentsline} itself is not changed, so an
+%    \verb|\addcontentsline{lof}...| after \cs{caption*} works. An
+%    undefined \cs{theH}\meta{type} is saved as undefined (\cs{ifcsname}
+%    does not make it \cs{relax}), so that it is undefined again after
+%    the restore; \cs{@caption@nostep@type} records the type, for
+%    \cs{@caption@uniqueH}. The
+%    kernel \cs{@caption} also gives the number of the unique suffix
+%    back (\cs{@caption@nostep@giveback}), since nothing used it there.
+%    \begin{macrocode}
+\def\@caption@nostep@defs#1{%
+  \edef\@caption@nostep@type{#1}%
+  \ifcsname theH#1\endcsname
+    \expandafter\let\expandafter\@caption@saved@H\csname theH#1\endcsname
+  \else
+    \let\@caption@saved@H\@undefined
+  \fi
+  \if@captionstar
+    \expandafter\let\expandafter\@caption@saved@fnum
+      \csname fnum@#1\endcsname
+    \expandafter\let\expandafter\@caption@saved@ext
+      \csname ext@#1\endcsname
+    \def\@caption@nostep@restore{%
+      \expandafter\let\csname theH#1\endcsname\@caption@saved@H
+      \expandafter\let\csname fnum@#1\endcsname\@caption@saved@fnum
+      \expandafter\let\csname ext@#1\endcsname\@caption@saved@ext
+      \let\@caption@nostep@restore\relax
+      \let\@caption@nostep@giveback\relax}%
+    \expandafter\let\csname fnum@#1\endcsname\@caption@nolabel
+    \expandafter\let\csname ext@#1\endcsname\@empty
+  \else
+    \def\@caption@nostep@restore{%
+      \expandafter\let\csname theH#1\endcsname\@caption@saved@H
+      \let\@caption@nostep@restore\relax
+      \let\@caption@nostep@giveback\relax}%
+  \fi
+  \@caption@uniqueH{#1}%
+  \edef\@caption@nostep@giveback{%
+    \noexpand\@caption@uniqueH@back{\@caption@Hname}%
+      {\csname @caption@H@n@\@caption@Hname\endcsname}}}
+\let\@caption@nostep@restore\relax
+\let\@caption@nostep@giveback\relax
+\def\@caption@uniqueH@back#1#2{%
+  \expandafter\ifnum\csname @caption@H@n@#1\endcsname=#2\relax
+    \expandafter\xdef\csname @caption@H@n@#1\endcsname
+      {\the\numexpr#2-\@ne}%
+  \fi}
+%    \end{macrocode}
+%    The settings of \cs{@caption@nostep@defs} have to outlive
+%    \cs{caption*} (and a caption that does not step), because the kernel
+%    \cs{caption} gets no control back after \cs{@caption}: \cs{@caption}
+%    reads its own arguments and has to stay the last token of
+%    \cs{caption}, as \pkg{float} and others look for an optional
+%    argument after it. And a replaced \cs{@caption} may defer its work:
+%    \pkg{threeparttable} stores the call of the previous \cs{@caption}
+%    (\cs{TPT@docapt}) and executes it only at the start of the tabular,
+%    after \cs{caption*} has ended. Then \cs{fnum@}\meta{type},
+%    \cs{ext@}\meta{type}, \cs{theH}\meta{type} and \cs{if@captionstar}
+%    must still have the values for \cs{caption*}; the switch also if
+%    the deferred \cs{@caption} is the kernel's. So the settings last
+%    until the kernel \cs{@caption} starts, until the next \cs{caption},
+%    or until the end of the group (in practice that of the float).
+%
+%    \cs{@kernel@caption@reset} ends them: it undoes everything
+%    \cs{@caption@nostep@defs} has set (it drops a pending give-back of
+%    the unique number without giving it back, since a replaced
+%    \cs{@caption} may have used it for a target), sets
+%    \cs{if@captionstar} false and \cs{if@captionstep} and
+%    \cs{if@captiontarget} true, which is the state outside of a caption.
+%    The kernel \cs{caption} starts with it and the kernel \cs{@caption}
+%    ends with it, so it is the only code that ends these settings. It is
+%    the command for
+%    code that keeps its own \cs{caption} and passes only \cs{caption*}
+%    to the kernel (for example with
+%    \verb|\@ifstar{\@kernel@caption*}{|\ldots\verb|}|): such code
+%    must start its own numbered
+%    \cs{caption} with \cs{@kernel@caption@reset}, otherwise the settings
+%    of a \cs{caption*} before it in the same float are still active (no
+%    label, no list entry, the target name of the \cs{caption*}). As
+%    whatever \cs{@caption@nostep@defs} may set in the future is undone
+%    by it as well, such code depends on nothing else. It is defined
+%    together with \cs{caption} (also by \pkg{latexrelease}), so after a
+%    roll-back to an earlier date it is undefined, as \cs{@kernel@caption}.
 %    \begin{macrocode}
 \def\@kernel@caption@reset{%
+  \@caption@nostep@restore
   \@captionstarfalse
   \@captionsteptrue
   \@captiontargettrue}
@@ -780,12 +938,17 @@
 % \changes{v1.2k}{2026-10-06}
 %     {No list entry and the label \cs{@caption@nolabel} for \cs{caption*};
 %      end with \cs{@kernel@caption@reset}}
+% \changes{v1.2k}{2026-10-06}
+%     {Undo the settings for a replaced \cs{@caption} before the \cs{par}}
 %    \cs{@caption}\marg{type}\oarg{list text}\marg{text} keeps its
 %    signature, so code that wraps or replaces it keeps working.
 %    The typesetting (with \cs{@parboxrestore} and \cs{@makecaption})
-%    is now done by \cs{@kernel@caption@typeset}. At the end
-%    \cs{@kernel@caption@reset} resets the switches, so that code which
-%    calls \cs{@caption} or
+%    is now done by \cs{@kernel@caption@typeset}. At the start the
+%    settings of \cs{@caption@nostep@defs} are undone, before the
+%    \cs{par}, so that the paragraph hooks, the output routine and the
+%    list entry and the typesetting see the normal definitions. At the end
+%    \cs{@kernel@caption@reset} resets the switches (the settings are
+%    already undone by then), so that code which calls \cs{@caption} or
 %    the socket \texttt{caption/step} directly (without \cs{caption}) gets
 %    a normal caption.
 %    \begin{macrocode}
@@ -794,6 +957,8 @@
 %<latexrelease>\IncludeInRelease{2026/11/01}%
 %<latexrelease>                 {\@caption}{caption body}%
 \long\def\@caption#1[#2]#3{%
+  \@caption@nostep@giveback
+  \@caption@nostep@restore
   \par
   \if@captionstar
     \expandafter\@firstoftwo
