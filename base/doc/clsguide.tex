@@ -42,7 +42,7 @@
     \texttt{clsguide.tex} for full details.}%
 }
 
-\date{2026-06-01}
+\date{2026-10-06}
 
 \NewDocumentCommand\cs{m}{\texttt{\textbackslash\detokenize{#1}}}
 \NewDocumentCommand\marg{m}{\arg{#1}}
@@ -1516,6 +1516,47 @@ by \cs{refstepcounter}.
  |\NextLinkTarget|\arg{target name}
 \end{decl}
 This changes the name of the next target that will be created.
+
+\subsection{Captions and \cs{caption*}}
+
+\LaTeX{} provides \cs{caption*} for captions without a number. It uses
+the class's \cs{@makecaption}, and the kernel offers hooks and sockets
+so that classes and packages do not need to redefine
+\cs{caption} or \cs{@caption} (see the documentation of
+\texttt{ltfloat.dtx}). For classes this means:
+\begin{itemize}
+\item \cs{@makecaption}\arg{label}\arg{text} is also used for
+  \cs{caption*}. Then the switch \cs{if@captionstar} is true and
+  \meta{label} is \cs{@caption@nolabel}. This label is not empty (a test
+  for an empty label does not work), but it typesets nothing. A class
+  should omit the label \emph{and} the separator if the switch is true;
+  otherwise the separator is printed before the text (`: Text' with
+  \verb|#1: #2|, as in the standard classes). The switch is the only
+  test that classes should use, for example:
+\begin{verbatim}
+\sbox\@tempboxa{\if@captionstar\else#1\captionsep\fi#2}%
+\end{verbatim}
+  Test the switch directly (not with \cs{ifx} against \cs{iftrue}, which
+  would unbalance a conditional when the code is in a skipped branch). A
+  class that wants to work with older formats can provide the switch
+  first:
+\begin{verbatim}
+\@ifundefined{if@captionstar}{\newif\if@captionstar}{}
+\end{verbatim}
+\item A class that redefines \cs{@caption} (for example to change the
+  list entry or the spacing) should preferably use the hooks and sockets
+  of the caption interface instead, where they cover the change (see the
+  documentation of \texttt{ltfloat.dtx}). A redefinition that does not
+  test \cs{if@captionstar} gives \cs{caption*} the label and the list
+  entry of a numbered caption, with the number of the previous caption.
+\item A class or package that redefines \cs{caption} itself takes over
+  the star as well: unless it handles it (no counter step, no list entry,
+  \cs{@caption@nolabel} as label for \cs{@makecaption} with
+  \cs{if@captionstar} true),
+  \verb|\caption*{Text}| gives a numbered caption with the text `*' and a
+  list entry, followed by `Text'. It is better to keep the kernel
+  definition and to use the hooks and sockets.
+\end{itemize}
 
 
 \subsection{Querying document command argument specifications}

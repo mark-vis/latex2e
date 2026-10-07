@@ -1,0 +1,158 @@
+This is a generated file for the l3build validation system.
+Don't change this file in any respect.
+============================================================
+TEST 1: normal caption
+============================================================
+BEFORE: {figure}{false}{NoValue}{Normal}, figure=0, linewidth=345.0pt
+TARGET: new target figure.1
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Normal}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Normal], star=false
+SWITCHES: star=false, step=true, target=true
+BEFORE: {figure}{false}{NoValue}{Normal with kernel list entry}, figure=1, linewidth=345.0pt
+TARGET: new target figure.2
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Normal with kernel list entry}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Normal with kernel list entry], star=false
+============================================================
+============================================================
+TEST 2: star caption: no step, no list entry, no label
+============================================================
+BEFORE: {figure}{true}{NoValue}{Star}, figure=2, linewidth=345.0pt
+MAKECAPTION: [\@caption@nolabel ] [\ignorespaces Star], star=true
+figure=2
+SWITCHES: star=false, step=true, target=true
+============================================================
+============================================================
+TEST 3: star with optional argument (only given to the hook)
+============================================================
+BEFORE: {figure}{true}{[x]}{Star with optional argument}, figure=2, linewidth=345.0pt
+MAKECAPTION: [\@caption@nolabel ] [\ignorespaces Star with optional argument], star=true
+figure=2
+============================================================
+============================================================
+TEST 4: empty optional argument: kernel plug writes an empty entry
+============================================================
+BEFORE: {figure}{false}{[]}{Empty optional argument}, figure=2, linewidth=345.0pt
+TARGET: new target figure.3
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces }}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Empty optional argument], star=false
+BEFORE: {figure}{false}{[]}{Braced empty optional argument}, figure=3, linewidth=345.0pt
+TARGET: new target figure.4
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces }}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Braced empty optional argument], star=false
+============================================================
+============================================================
+TEST 5: empty text, no optional argument
+============================================================
+BEFORE: {figure}{false}{NoValue}{}, figure=4, linewidth=345.0pt
+TARGET: new target figure.5
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces }}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces ], star=false
+============================================================
+============================================================
+TEST 6: bracket in the optional argument, spaces
+============================================================
+BEFORE: {figure}{false}{[a]b]}{x}, figure=5, linewidth=345.0pt
+TARGET: new target figure.6
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces a]b}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces x], star=false
+BEFORE: {figure}{false}{[Opt]}{Spaces}, figure=6, linewidth=345.0pt
+TARGET: new target figure.7
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Opt}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Spaces], star=false
+============================================================
+============================================================
+TEST 7: hook arguments with \#
+============================================================
+BEFORE: {figure}{false}{NoValue}{A \# B}, figure=7, linewidth=345.0pt
+TARGET: new target figure.8
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces A \# B}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces A \# B], star=false
+============================================================
+============================================================
+TEST 8: continued float: no step, counters reset by figure kept
+============================================================
+BEFORE: {figure}{false}{NoValue}{Continued}, figure=8, linewidth=345.0pt
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Continued}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Continued], star=false
+figure=8, label=8, sub=3
+SWITCHES: star=false, step=true, target=true
+BEFORE: {figure}{false}{NoValue}{Next}, figure=8, linewidth=345.0pt
+TARGET: new target figure.9
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Next}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Next], star=false
+figure=9, label=9, sub=0
+href=figure.9
+============================================================
+============================================================
+TEST 9: no target
+============================================================
+BEFORE: {figure}{false}{NoValue}{No target}, figure=9, linewidth=345.0pt
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces No target}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces No target], star=false
+href=OLD
+BEFORE: {figure}{false}{NoValue}{With target}, figure=10, linewidth=345.0pt
+TARGET: new target figure.11
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces With target}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces With target], star=false
+href=figure.11
+============================================================
+============================================================
+TEST 10: float target
+============================================================
+BEFORE: {figure}{false}{NoValue}{Float target X}, figure=11, linewidth=345.0pt
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Float target X}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Float target X], star=false
+href=X
+BEFORE: {table}{false}{NoValue}{Table in the figure}, figure=12, linewidth=345.0pt
+TARGET: new target table.1
+ADDCONTENTSLINE: {lot}{table}{\protect \numberline {\csname thetable\endcsname }{\ignorespaces Table in the figure}}
+MAKECAPTION: [\csname fnum@table\endcsname ] [\ignorespaces Table in the figure], star=false
+href=table.1
+BEFORE: {figure}{false}{NoValue}{Empty float target}, figure=12, linewidth=345.0pt
+TARGET: new target figure.13
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Empty float target}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Empty float target], star=false
+href=figure.13
+BEFORE: {figure}{false}{NoValue}{Relax float target}, figure=13, linewidth=345.0pt
+TARGET: new target figure.14
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Relax float target}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Relax float target], star=false
+href=figure.14
+============================================================
+============================================================
+TEST 11: switches are set true by \caption 
+============================================================
+BEFORE: {figure}{false}{NoValue}{Switches false before}, figure=14, linewidth=345.0pt
+TARGET: new target figure.15
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Switches false before}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Switches false before], star=false
+figure=15
+SWITCHES: star=false, step=true, target=true
+============================================================
+============================================================
+TEST 12: direct call of the body (@caption)
+============================================================
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces L}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces T], star=false
+MAKECAPTION: [\@caption@nolabel ] [\ignorespaces T2 star], star=true
+SWITCHES: star=false, step=true, target=true
+============================================================
+============================================================
+TEST 13: continued float with a float target: the float target
+============================================================
+BEFORE: {figure}{false}{NoValue}{Continued in a float with a target}, figure=15, linewidth=345.0pt
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Continued in a float with a target}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Continued in a float with a target], star=false
+figure=15, label=15, sub=0
+href=Y
+============================================================
+============================================================
+TEST 14: continued float without target: nothing made, href unchanged
+============================================================
+BEFORE: {figure}{false}{NoValue}{Continued, no target}, figure=15, linewidth=345.0pt
+ADDCONTENTSLINE: {lof}{figure}{\protect \numberline {\csname thefigure\endcsname }{\ignorespaces Continued, no target}}
+MAKECAPTION: [\csname fnum@figure\endcsname ] [\ignorespaces Continued, no target], star=false
+figure=15, label=15, sub=0
+href=OLD
+============================================================
+[1] [2] (caption-interface-001.aux)

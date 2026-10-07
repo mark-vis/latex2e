@@ -1,0 +1,255 @@
+% Test of the caption interface: \caption* and its label
+% \@caption@nolabel (which typesets nothing), the hook caption/before,
+% the socket caption/step, the switches \if@captionstep and
+% \if@captiontarget and the float target \@floatHref@<type> (as the
+% kernel plug reads it). Unique targets are tested in
+% caption-interface-003, a replaced \@caption in caption-interface-004,
+% the separator removal of the label in caption-interface-005, the
+% roll-back in caption-interface-002, \caption outside of floats in
+% caption-outside-001.
+\input{regression-test}
+\documentclass{article}
+\makeatletter
+% the kernel definitions, for the tests that wrap or keep them
+\let\kernelcaption\caption
+\let\kernelatcaption\@caption
+% show the arguments \@makecaption gets
+\let\ORImakecaption\@makecaption
+\long\def\@makecaption#1#2{%
+  \typeout{MAKECAPTION: [\detokenize{#1}] [\detokenize{#2}],
+    star=\if@captionstar true\else false\fi}%
+  \ORImakecaption{#1}{#2}}
+% show what is written to the list
+\let\ORIaddcontentsline\addcontentsline
+\def\addcontentsline#1#2#3{%
+  \typeout{ADDCONTENTSLINE: {#1}{#2}{\detokenize{#3}}}%
+  \ORIaddcontentsline{#1}{#2}{#3}}
+% show the targets made by the step
+\NewSocketPlug{refstepcounter/target}{test}{%
+  \xdef\@currentHref{#1.\csname theH#1\endcsname}%
+  \typeout{TARGET: new target \@currentHref}}
+\AssignSocketPlug{refstepcounter/target}{test}
+\def\showswitches{%
+  \typeout{SWITCHES: star=\if@captionstar true\else false\fi,
+    step=\if@captionstep true\else false\fi,
+    target=\if@captiontarget true\else false\fi}}
+% the hooks
+\long\def\showbool#1{\IfBooleanTF{#1}{\def\tmpstar{true}}{\def\tmpstar{false}}}
+\long\def\showopt#1{\IfNoValueTF{#1}%
+  {\def\tmpopt{NoValue}}{\def\tmpopt{[\detokenize{#1}]}}}
+\AddToHookWithArguments{caption/before}[test]{%
+  \showbool{#2}\showopt{#3}%
+  \typeout{BEFORE: {#1}{\tmpstar}{\tmpopt}{\detokenize{#4}},
+    figure=\thefigure, linewidth=\the\linewidth}%
+  \csname testbefore\endcsname}
+\newcounter{sub}[figure]
+\gdef\@currentHref{none}
+% helpers for the tests (\makeatletter does not work inside \TEST)
+\def\stepoff{\@captionstepfalse}
+\def\targetoff{\@captiontargetfalse}
+\def\sethref#1{\gdef\@currentHref{#1}}
+\def\showhref{\typeout{href=\@currentHref}}
+\def\showlabel{\typeout{figure=\thefigure, label=\@currentlabel,
+  sub=\thesub}}
+\def\setfloathref#1{\def\@floatHref@figure{#1}}
+\def\emptyfloathref{\let\@floatHref@figure\@empty}
+\def\relaxfloathref{\let\@floatHref@figure\relax}
+\def\settype#1{\def\@captype{#1}}
+\def\directcaption{\@caption}
+\def\starton{\@captionstartrue}
+\def\nolabel{\@caption@nolabel}
+\def\resetcaption{\@kernel@caption@reset}
+\def\showgiveback{\typeout{giveback: \meaning\@caption@nostep@giveback}}
+% a package that keeps its own \caption (here the definition of
+% earlier releases) and passes only \caption* to the kernel
+\def\owncaption{\refstepcounter\@captype\@dblarg{\@caption\@captype}}
+\def\useowncaption{\def\caption{\@ifstar{\kernelcaption*}%
+  {\@kernel@caption@reset\owncaption}}}
+% replacements of \@caption: as in a class that does not know \caption*
+% (the definition of llncs), a wrapper of the kernel definition (as in
+% memoir or nameref), and a definition that defers the kernel definition
+% (as threeparttable)
+\long\def\classcaption#1[#2]#3{\par\addcontentsline{\csname
+  ext@#1\endcsname}{#1}{\protect\numberline{\csname
+  the#1\endcsname}{\ignorespaces #2}}\begingroup
+    \@parboxrestore
+    \@makecaption{\csname fnum@#1\endcsname}{\ignorespaces #3}\par
+  \endgroup}
+\long\def\targetcaption#1[#2]#3{%
+  \protected@xdef\@currentHref{#1.\csname theH#1\endcsname}%
+  \typeout{CLASS TARGET: \@currentHref}%
+  \classcaption{#1}[{#2}]{#3}}
+\long\def\deferclasscaption#1[#2]#3{%
+  \gdef\deferred{\classcaption{#1}[{#2}]{#3}}}
+\long\def\wrappercaption#1[#2]#3{%
+  \typeout{WRAPPER: fnum=\expandafter\meaning\csname fnum@#1\endcsname}%
+  \kernelatcaption{#1}[{#2}]{#3}}
+\long\def\defercaption#1[#2]#3{%
+  \gdef\deferred{\kernelatcaption{#1}[{#2}]{#3}}}
+\def\useclasscaption{\let\@caption\classcaption}
+\def\usewrappercaption{\let\@caption\wrappercaption}
+\def\usedefercaption{\let\@caption\defercaption}
+\def\usetargetcaption{\let\@caption\targetcaption}
+\def\usedeferclasscaption{\let\@caption\deferclasscaption}
+\def\showlabelexpansion{%
+  \def\@makecaption##1##2{\protected@edef\reserved@a{##1}%
+    \typeout{MAKECAPTION: label=[\reserved@a], star=\if@captionstar
+      true\else false\fi}}}
+\def\showrestored{%
+  \typeout{after: fnum=\meaning\fnum@figure, ext=\meaning\ext@figure,
+    theH=\meaning\theHfigure}}
+\def\staroff{\@captionstarfalse}
+% the label of caption* in different \@makecaption shapes: the width
+% of the box compared with the text alone
+\def\shape#1#2{%
+  \setbox0=\hbox{\starton #2}\setbox2=\hbox{Text}%
+  \typeout{SHAPE #1: \ifdim\wd0=\wd2 clean\else
+    width \the\wd0\space(text \the\wd2)\fi}}
+\def\sep{: }
+\let\savedwarn\@caption@nolabel@warn
+\def\rewarn{\global\let\@caption@nolabel@warn\savedwarn}
+% shapes in vertical mode: total height and natural width of the last line
+% compared with the text alone; and whether the label warned
+\def\lastline#1#2{%
+  \setbox4\vbox{\unvcopy#1\unskip\unpenalty\unskip\global\setbox5\lastbox}%
+  \setbox6\hbox{\unhcopy5\unskip\unskip\unpenalty}%
+  \edef#2{\the\dimexpr\ht#1+\dp#1\relax/\the\wd6}}
+\def\showwarned{\ifx\@caption@nolabel@warn\relax warning\else no warning\fi}
+\long\def\vshape#1#2{%
+  \rewarn
+  \setbox0=\vbox{\hsize=10cm \parindent=0pt \starton #2\par}%
+  \setbox2=\vbox{\hsize=10cm \parindent=0pt \noindent Text\par}%
+  \lastline0\tmpa \lastline2\tmpb
+  \typeout{VSHAPE #1: \ifx\tmpa\tmpb clean\else
+    height/width \tmpa\space(text \tmpb)\fi, \showwarned}}
+\def\hshape#1#2{\rewarn\shape{#1}{#2}\typeout{.... \showwarned}}
+% the same in vertical mode, compared with a reference (#2) instead of
+% the text alone
+\long\def\vshapeto#1#2#3{%
+  \rewarn
+  \setbox0=\vbox{\hsize=10cm \parindent=0pt \starton #3\par}%
+  \setbox2=\vbox{\hsize=10cm \parindent=0pt #2\par}%
+  \lastline0\tmpa \lastline2\tmpb
+  \typeout{VSHAPE #1: \ifx\tmpa\tmpb as reference\else
+    height/width \tmpa\space(reference \tmpb)\fi, \showwarned}}
+\def\spsep{ \textendash\ }
+\def\sboxlabel{\sbox\@tempboxa{\nolabel}\unhbox\@tempboxa}
+\def\settowidthlabel{\settowidth\@tempdima{\nolabel: }\hskip\@tempdima}
+% a counter without \theH<counter> (as made before 2024 by \newcount)
+\newcount\c@myfig
+\def\themyfig{\arabic{myfig}}
+\def\p@myfig{}
+\def\fnum@myfig{My \themyfig}
+\def\ext@myfig{lom}
+\makeatother
+\begin{document}
+\START
+\TEST{normal caption}{%
+  \begin{figure}
+    \caption{Normal}
+    \showswitches
+  \end{figure}
+  \begin{figure}
+    \caption{Normal with kernel list entry}
+  \end{figure}}
+\TEST{star caption: no step, no list entry, no label}{%
+  \begin{figure}
+    \caption*{Star}
+    \typeout{figure=\thefigure}
+    \showswitches
+  \end{figure}}
+\TEST{star with optional argument (only given to the hook)}{%
+  \begin{figure}
+    \caption*[x]{Star with optional argument}
+    \typeout{figure=\thefigure}
+  \end{figure}}
+\TEST{empty optional argument: kernel plug writes an empty entry}{%
+  \begin{figure}
+    \caption[]{Empty optional argument}
+    \caption[{}]{Braced empty optional argument}
+  \end{figure}}
+\TEST{empty text, no optional argument}{%
+  \begin{figure}
+    \caption{}
+  \end{figure}}
+\TEST{bracket in the optional argument, spaces}{%
+  \begin{figure}
+    \caption[{a]b}]{x}
+    \caption [Opt] {Spaces}
+  \end{figure}}
+\TEST{hook arguments with \#}{%
+  \begin{figure}
+    \caption{A \# B}
+  \end{figure}}
+\TEST{continued float: no step, counters reset by figure kept}{%
+  \begin{figure}
+    \setcounter{sub}{3}%
+    \let\testbefore\stepoff
+    \caption{Continued}
+    \showlabel
+    \showswitches
+  \end{figure}
+  \begin{figure}
+    \caption{Next}
+    \showlabel
+    \showhref
+  \end{figure}}
+\TEST{no target}{%
+  \begin{figure}
+    \sethref{OLD}%
+    \let\testbefore\targetoff
+    \caption{No target}
+    \showhref
+  \end{figure}
+  \begin{figure}
+    \caption{With target}
+    \showhref
+  \end{figure}}
+\TEST{float target}{%
+  \begin{figure}
+    \setfloathref{X}%
+    \caption{Float target X}
+    \showhref
+    \settype{table}%
+    \caption{Table in the figure}
+    \showhref
+    \settype{figure}%
+    \emptyfloathref
+    \caption{Empty float target}
+    \showhref
+    \relaxfloathref
+    \caption{Relax float target}
+    \showhref
+  \end{figure}}
+\TEST{switches are set true by \caption}{%
+  \begin{figure}
+    \stepoff
+    \targetoff
+    \caption{Switches false before}
+    \typeout{figure=\thefigure}
+    \showswitches
+  \end{figure}}
+\TEST{direct call of the body (@caption)}{%
+  \begin{figure}
+    \directcaption{figure}[L]{T}
+    \starton
+    \directcaption{figure}[L2]{T2 star}
+    \showswitches
+  \end{figure}}
+\TEST{continued float with a float target: the float target}{%
+  \begin{figure}
+    \setfloathref{Y}%
+    \let\testbefore\stepoff
+    \caption{Continued in a float with a target}
+    \showlabel
+    \showhref
+  \end{figure}}
+\TEST{continued float without target: nothing made, href unchanged}{%
+  \begin{figure}
+    \sethref{OLD}%
+    \def\testbefore{\stepoff\targetoff}%
+    \caption{Continued, no target}
+    \showlabel
+    \showhref
+  \end{figure}}
+\end{document}

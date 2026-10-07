@@ -54,6 +54,8 @@
 %</driver>
 % \fi
 %
+% \providecommand\hook[1]{\texttt{#1}}
+% \providecommand\plug[1]{\texttt{#1}}
 %
 % \section{Floats}
 %
@@ -229,72 +231,266 @@
 %    \end{macrocode}
 % \end{macro}
 %
-% \begin{macro}{\caption}
-% \begin{macro}{\@caption@skip,\@caption@skip@star,\@caption@skip@args,
-%                \@caption@skip@opt}
+% \paragraph{The caption interface.}
 %
-%    This is set to be an error message outside a float since no
-%    captype is defined there; this may need to be changed by some
-%    classes. After the error the star and the arguments are skipped
-%    (before, the caption text was typeset). \cs{@caption@skip} removes
-%    the rest of \cs{caption} (as \cs{@gobble} did before) and
-%    \cs{@caption@skip@star} is protected, so that \cs{caption} outside a
-%    float still expands without errors in an expansion context.
-% \changes{v1.1u}{1999/04/19}
-%    {Made caption an error outside a float: latex/2815}
-% \changes{v1.2k}{2026-10-06}
-%    {Outside a float, skip the star and the arguments after the error}
+% \changes{v1.2k}{2026-10-06}{Caption interface: hook \texttt{caption/before},
+%    socket \texttt{caption/step}, switches \cs{if@captionstep} and
+%    \cs{if@captiontarget}}
+%    \cs{caption}\oarg{list text}\marg{text} and
+%    \cs{caption*}\oarg{opt}\marg{text} process a caption in the
+%    following steps (inside a float, \meta{type} is the expansion of
+%    \cs{@captype}, e.g., \texttt{figure}):
+%    \begin{enumerate}
+%    \item The generic hook \hook{cmd/caption/before} (as for every
+%      command; it is executed before anything else).
+%    \item Outside of a float an error is raised (as before).
+%    \item \cs{@kernel@caption@reset} sets the switches
+%      \cs{if@captionstar}, \cs{if@captionstep} and \cs{if@captiontarget}
+%      to their defaults. Then the star and the arguments are read. An
+%      absent optional argument is \cs{NoValue}.
+%    \item The hook \hook{caption/before} is executed.
+%    \item Unless \cs{caption*} was used: the socket \texttt{caption/step}
+%      steps the counter.
+%    \item \cs{@caption}\marg{type}\oarg{list text}\marg{text} is called
+%      (the list text is the optional argument, or the text if it was
+%      not given). It does a \cs{par}, writes the list entry (not for
+%      \cs{caption*}), typesets the caption with \cs{@makecaption} and
+%      resets the switches \cs{if@captionstar}, \cs{if@captionstep} and
+%      \cs{if@captiontarget} to their defaults.
+%    \end{enumerate}
+%    Code that calls \cs{@caption} directly (e.g., for sub-captions) gets
+%    what \cs{@caption} does; it can set \cs{@captionstartrue} before the
+%    call.
+%    Without additional code in the hooks and with the default plugs, the
+%    result is the same as in earlier releases,
+%    except that \cs{caption*} is available.
+%
+% \paragraph{\cs{caption*} with classes and packages.}
+%    What \cs{caption*} gives depends on the definitions that are active:
+%    \begin{itemize}
+%    \item With the kernel \cs{caption} and \cs{@caption} (also if a
+%      package wraps them and calls the kernel definitions, as
+%      \cls{memoir} and \pkg{nameref} do): no step, no target, no list
+%      entry, and \cs{@makecaption} is called with the label
+%      \cs{@caption@nolabel} while \cs{if@captionstar} is true.
+%    \item With the kernel \cs{caption} and an \cs{@caption} that a class
+%      or package has replaced by a definition that does not know the
+%      star (\cls{llncs}, \cls{mwart}, \ldots): that
+%      definition typesets the label \cs{fnum@}\meta{type} with the number
+%      of the previous caption and writes a list entry, unless it tests
+%      \cs{if@captionstar}.
+%    \item The class's \cs{@makecaption} decides how the caption looks.
+%      The contract is: \cs{if@captionstar} is true, and the label (the
+%      first argument) is \cs{@caption@nolabel}, never empty. A
+%      \cs{@makecaption} that supports \cs{caption*} tests the switch and
+%      omits the label \emph{and} its separator (the tagging code does
+%      that); this is the only documented test (a test for an empty label
+%      does not work). For the many definitions that do not test it,
+%      \cs{@caption@nolabel} typesets nothing, but their separator is
+%      printed before the text (for example `: Text' with the standard
+%      classes). The standard classes are not changed, because packages
+%      compare \cs{@makecaption} with their definition (for example
+%      \pkg{babel-french}, which replaces the separator for French only if
+%      \cs{@makecaption} is the standard one).
+%    \item A package or class that replaces \cs{caption} itself bypasses
+%      all of this, for example \pkg{hyperref} if there is no
+%      \cs{DocumentMetadata}, \cls{beamer} and some classes:
+%      their \cs{caption} takes the star as the text of a numbered
+%      caption, as before. Such code has to be changed (for example by
+%      keeping the kernel \cs{caption} and using the hooks and sockets
+%      described here); the kernel cannot do it, because it is not called.
+%    \end{itemize}
+%
+%    The declarations are also written to \texttt{latexrelease}, guarded,
+%    so that rolling forward from an older format works. After a roll-back
+%    they stay defined but are not used.
+%
+% \paragraph{The hook \texttt{caption/before}.}
+%    A hook with four arguments:
+%    \begin{description}
+%    \item[\texttt{caption/before}] is executed by \cs{caption} once per
+%      caption (also for \cs{caption*}), after the star and the arguments
+%      have been read and before the counter is stepped. The arguments are
+%      the type, \cs{BooleanTrue} for \cs{caption*} or \cs{BooleanFalse}
+%      otherwise (test with \cs{IfBooleanTF}), the optional argument as
+%      given or \cs{NoValue} if it was absent (test with \cs{IfNoValueTF};
+%      |[]| and |[{}]| are both given and empty), and the caption text.
+%      The hook is executed at the group level of the caller (in a float
+%      the group of the float, with its \cs{linewidth}), so local settings
+%      made here are valid for the rest of the float. This is the place to
+%      decide that the counter should not be stepped (\cs{@captionstepfalse},
+%      e.g., for a continued float) or that no target should be created
+%      (\cs{@captiontargetfalse}, if the code makes its own target). The hook
+%      is not executed if \cs{@caption} is called directly.
+%    \end{description}
+%    The hook is executed outside of any group the kernel makes.
 %    \begin{macrocode}
 %</2ekernel>
 %<*2ekernel|latexrelease>
 %<latexrelease>\IncludeInRelease{2026/11/01}%
-%<latexrelease>                 {\caption}{caption arguments}%
-\def\caption{%
-   \ifx\@captype\@undefined
-     \@latex@error{\noexpand\caption outside float}\@ehd
-     \expandafter\@caption@skip
-   \else
-     \refstepcounter\@captype
-     \expandafter\@firstofone
-   \fi
-   {\@dblarg{\@caption\@captype}}%
+%<latexrelease>                 {\@kernel@caption@step}{caption interface}%
+\NewHookWithArguments{caption/before}{4}
+%    \end{macrocode}
+%
+% \begin{socketdecl}{caption/step}
+%    This socket is used by \cs{caption} (not by \cs{caption*}) to step
+%    the counter of the caption and to set \cs{@currentlabel} and the
+%    target for links (\cs{@currentHref}). The argument is the counter
+%    (the type of the caption). It is used after the hook
+%    \hook{caption/before}. Other code may use it for caption-like
+%    steps (e.g., for sub-captions or a phantom caption); it then has to
+%    set the switches \cs{if@captionstep} and \cs{if@captiontarget}
+%    itself before the use.
+%
+%    Every plug must fulfil the following contract:
+%    \begin{enumerate}
+%    \item Everything is wrapped in the socket \texttt{refstepcounter}
+%      (as in \cs{refstepcounter}).
+%    \item If \cs{if@captionstep} is true, the counter is stepped with
+%      \cs{stepcounter} (so that the counters reset by it are reset).
+%      Otherwise no counter is changed.
+%    \item \cs{@currentcounter} and \cs{@currentlabel} are set as by
+%      \cs{refstepcounter}.
+%    \item If \cs{if@captiontarget} is true: if \cs{@floatHref@}\meta{type}
+%      is defined, not \cs{relax} and not empty, \cs{@currentHref} is
+%      set globally to its value, and no new target is made. Otherwise,
+%      if the counter was stepped, the sockets
+%      \texttt{refstepcounter/target} and \texttt{recordtarget} are used,
+%      as in \cs{refstepcounter}; if it was not stepped, no target is made
+%      and \cs{@currentHref} is unchanged. If \cs{if@captiontarget} is
+%      false, none of this is done and \cs{@currentHref} is unchanged.
+%    \end{enumerate}
+%    A target made from the unchanged counter would have the same name as
+%    the one of the caption that stepped the counter last, so a caption
+%    that does not step the counter (e.g., the caption of a continued
+%    float) must never get such a target: \pkg{hyperref} would make a
+%    second destination with the same name, and links to it would lead to
+%    the first caption.
+%    Inside a float that has a target of
+%    its own (\cs{@floatHref@}\meta{type}), that target is used, because it
+%    belongs to the float that contains the caption.
+%    The default plug \plug{kernel} uses \cs{@kernel@caption@step}, which
+%    implements exactly this.
+% \end{socketdecl}
+% \begin{plugdecl}{kernel (caption/step)}
+%    \begin{macrocode}
+\IfSocketExistsF{caption/step}{%
+  \NewSocket{caption/step}{1}%
+  \NewSocketPlug{caption/step}{kernel}{\@kernel@caption@step{#1}}%
+  \AssignSocketPlug{caption/step}{kernel}%
 }
-\long\def\@caption@skip#1{\@caption@skip@star}
-\protected\def\@caption@skip@star{%
-  \@ifstar\@caption@skip@args\@caption@skip@args}
-\def\@caption@skip@args{%
-  \kernel@ifnextchar[\@caption@skip@opt{\@caption@skip@opt[]}}
-\long\def\@caption@skip@opt[#1]#2{}
-%</2ekernel|latexrelease>
-%<latexrelease>\EndIncludeInRelease
-%<latexrelease>\IncludeInRelease{0000/00/00}%
-%<latexrelease>                 {\caption}{caption arguments}%
-%<latexrelease>\def\caption{%
-%<latexrelease>   \ifx\@captype\@undefined
-%<latexrelease>     \@latex@error{\noexpand\caption outside float}\@ehd
-%<latexrelease>     \expandafter\@gobble
-%<latexrelease>   \else
-%<latexrelease>     \refstepcounter\@captype
-%<latexrelease>     \expandafter\@firstofone
-%<latexrelease>   \fi
-%<latexrelease>   {\@dblarg{\@caption\@captype}}%
-%<latexrelease>}
-%<latexrelease>\EndIncludeInRelease
-%<*2ekernel>
+%    \end{macrocode}
+% \end{plugdecl}
+%
+% \begin{macro}{\if@captionstar,\if@captionstep,\if@captiontarget}
+%    \cs{if@captionstar} is true while a caption made by \cs{caption*} is
+%    processed: from the start of \cs{caption*} until the end of
+%    \cs{@caption}, so also in the caption hooks and in \cs{@makecaption}.
+%    In that case the first
+%    argument of \cs{@makecaption} is \cs{@caption@nolabel}, and a
+%    \cs{@makecaption} can test this switch to omit the label and its
+%    separator. Code
+%    that calls \cs{@caption} directly can set it true before the
+%    call.
+%
+%    \cs{if@captionstep} and \cs{if@captiontarget} are true outside of
+%    captions. They are set true by \cs{caption} before the hook
+%    \hook{caption/before} is executed. Code in that hook (or code that
+%    uses the socket \texttt{caption/step} itself, directly before the use)
+%    can set them false:
+%    \begin{itemize}
+%    \item \cs{@captionstepfalse}: the counter is not stepped by the plug,
+%      either because the caption continues an earlier one (a continued
+%      float) or because the code has already stepped it itself (e.g.,
+%      for a caption after sub-captions that stepped it);
+%      \cs{@currentcounter} and \cs{@currentlabel}
+%      are still set, and if \cs{if@captiontarget} is true the float
+%      target is used if there is one; no other target is made, as it
+%      would have the name of the last caption that stepped the counter
+%      (see the socket \texttt{caption/step}). Code that has stepped
+%      the counter itself and wants a target sets
+%      \cs{@captiontargetfalse} as well and makes the target itself
+%      (with the socket \texttt{refstepcounter/target}).
+%    \item \cs{@captiontargetfalse}: the step makes no target and does not
+%      record one for tagging, and \cs{@currentHref} is unchanged; the code
+%      makes its own target.
+%    \end{itemize}
+%    The three switches are reset at the end of \cs{@caption} (with
+%    \cs{@kernel@caption@reset}), so nothing is passed on to a later
+%    caption.
+%
+%    (\cs{@ifundefined} and not \cs{ifx} because a skipped \cs{if...}
+%    would unbalance the conditional.)
+%    \begin{macrocode}
+\@ifundefined{if@captionstar}{\newif\if@captionstar}{}
+\@ifundefined{if@captionstep}{\newif\if@captionstep\@captionsteptrue}{}
+\@ifundefined{if@captiontarget}{\newif\if@captiontarget\@captiontargettrue}{}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\@kernel@caption@step}
+% \begin{macro}{\@caption@target,\@caption@newtarget,\@caption@floattarget}
+%    \cs{@kernel@caption@step}\marg{counter} implements the contract of
+%    the socket \texttt{caption/step}. It is not \cs{refstepcounter},
+%    because the counter is not always stepped and the target not always
+%    made. The star guard of \cs{refstepcounter} is not needed, caption
+%    counters are never |*|.
+%    \begin{macrocode}
+\def\@kernel@caption@step#1{%
+  \UseSocket{refstepcounter}{%
+    \if@captionstep
+      \stepcounter{#1}%
+    \fi
+    \edef\@currentcounter{#1}%
+    \protected@edef\@currentlabel
+       {\csname p@#1\expandafter\endcsname\csname the#1\endcsname}%
+    \if@captiontarget
+      \@caption@target{#1}%
+    \fi}}
+%    \end{macrocode}
+%    The float code can provide the target of the current float of a
+%    type in \cs{@floatHref@}\meta{type} (the code for tagged floats in
+%    \pkg{latex-lab-float} does that). If it is defined, not \cs{relax}
+%    and not empty, the caption uses this target, otherwise a new one is
+%    made as by \cs{refstepcounter}, but only if the counter was stepped,
+%    because a target named after the unchanged counter would be a
+%    duplicate. \cs{@ifundefined}
+%    is used and not
+%    \cs{ifcsname}, so that a name that has been made \cs{relax} by a
+%    \cs{csname} test counts as undefined. As the type is part of the name,
+%    a \texttt{table} caption inside a \texttt{figure} or a step of a
+%    sub-caption counter (e.g., \texttt{subfigure}) does not use the target
+%    of the figure.
+%    \begin{macrocode}
+\def\@caption@target#1{%
+  \@ifundefined{@floatHref@#1}%
+    {\@caption@newtarget{#1}}%
+    {\expandafter\ifx\csname @floatHref@#1\endcsname\@empty
+       \expandafter\@caption@newtarget
+     \else
+       \expandafter\@caption@floattarget
+     \fi
+     {#1}}}
+\def\@caption@newtarget#1{%
+  \if@captionstep
+    \expandafter\@firstofone
+  \else
+    \expandafter\@gobble
+  \fi
+  {\UseSocket{refstepcounter/target}{#1}%
+   \UseTaggingSocket{recordtarget}}}
+\def\@caption@floattarget#1{%
+  \xdef\@currentHref{\csname @floatHref@#1\endcsname}}
 %    \end{macrocode}
 % \end{macro}
 % \end{macro}
 %
-% \begin{macro}{\@caption}
-% \changes{v1.0b}{1994/03/28}
-%     {Use \cs{normalsize} not \cs{@normalsize}}
-% \changes{v1.1r}{1996/12/06}
-%     {Call \cs{@setminpage} if needed. latex/2318}
+% \begin{macro}{\@kernel@caption@typeset}
+%    \cs{@kernel@caption@typeset}\marg{type}\marg{star}\marg{text} is the
+%    typesetting of the kernel: the previous code of \cs{@caption},
+%    with the label \cs{@caption@nolabel} for \cs{caption*}.
 %    \begin{macrocode}
-\long\def\@caption#1[#2]#3{%
-  \par
-  \addcontentsline{\csname ext@#1\endcsname}{#1}%
-    {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #2}}%
+\long\def\@kernel@caption@typeset#1#2#3{%
   \begingroup
 %    \end{macrocode}
 %
@@ -322,8 +518,240 @@
 %
 %    \begin{macrocode}
     \normalsize
-    \@makecaption{\csname fnum@#1\endcsname}{\ignorespaces #3}\par
+    \IfBooleanTF{#2}%
+      {\@makecaption{\@caption@nolabel}}%
+      {\@makecaption{\csname fnum@#1\endcsname}}%
+      {\ignorespaces #3}\par
   \endgroup}
+%    \end{macrocode}
+% \end{macro}
+%
+% \begin{macro}{\@caption@nolabel}
+% \changes{v1.2k}{2026-10-06}{Macro added: \cs{@caption@nolabel}, the label
+%    of \cs{caption*}}
+%    \cs{@caption@nolabel} is the label that \cs{caption*} passes to
+%    \cs{@makecaption}. The contract for \cs{@makecaption} is only that
+%    \cs{if@captionstar} is true and that the label is not empty but
+%    typesets nothing; a \cs{@makecaption} that supports \cs{caption*}
+%    tests the switch and omits the label and its separator. A separator
+%    that the \cs{@makecaption} of the class puts after the label is
+%    printed before the text.
+%    The command is robust, so that it survives \cs{edef} and case
+%    changing of the label.
+%    \begin{macrocode}
+\protected\def\@caption@nolabel{}
+%    \end{macrocode}
+% \end{macro}
+%
+%    \begin{macrocode}
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
+%    \end{macrocode}
+%
+% \begin{macro}{\caption}
+% \begin{macro}{\@caption@args,\@caption@read,\@caption@process}
+% \begin{macro}{\@kernel@caption@reset}
+% \begin{macro}{\@caption@skip,\@caption@skip@star,\@caption@skip@args,
+%                \@caption@skip@opt}
+%
+%    This is set to be an error message outside a float since no
+%    captype is defined there; this may need to be changed by some
+%    classes. After the error the star and the arguments are skipped
+%    (before, the caption text was typeset). \cs{@caption@skip} removes
+%    the rest of \cs{caption} (as \cs{@gobble} did before) and
+%    \cs{@caption@skip@star} is protected, so that \cs{caption} outside a
+%    float still expands without errors in an expansion context.
+% \changes{v1.1u}{1999/04/19}
+%    {Made caption an error outside a float: latex/2815}
+% \changes{v1.2k}{2026-10-06}
+%    {Outside a float, skip the star and the arguments after the error}
+% \changes{v1.2k}{2026-10-06}
+%    {Add star form; read the arguments without \cs{@dblarg}; hook
+%     \texttt{caption/before}; step the counter through the socket
+%     \texttt{caption/step}; \cs{@kernel@caption@reset}}
+%
+%    The star form \cs{caption*} typesets a caption without a label:
+%    it does not step the counter, sets no target and writes no list
+%    entry. \cs{@currentlabel} and \cs{@currentHref} are not changed (as
+%    after \cs{section*}), so a \cs{label} after \cs{caption*} records
+%    whatever was set last, which can be a caption, a section or nothing;
+%    it should not be used there. An optional argument is accepted; it
+%    is only passed to the
+%    hook \hook{caption/before} (and to \cs{@caption} as list text, which
+%    the kernel \cs{@caption} does not use for \cs{caption*}).
+%
+%    The star is read with \cs{@ifstar} and the optional argument with
+%    \cs{kernel@ifnextchar}, so spaces before them are skipped, as with
+%    \cs{@dblarg} before. The type passed on is the expansion of
+%    \cs{@captype}. User text is never inside a conditional that \TeX{}
+%    might skip. \cs{@caption} is the last token, as before
+%    (\pkg{float}'s \cs{float@caption}, for example, looks for an
+%    optional argument after it), also for \cs{caption*}.
+%    \begin{macrocode}
+%</2ekernel>
+%<*2ekernel|latexrelease>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\caption}{caption arguments}%
+\def\caption{%
+   \ifx\@captype\@undefined
+     \@latex@error{\noexpand\caption outside float}\@ehd
+     \expandafter\@caption@skip
+   \else
+     \expandafter\@firstofone
+   \fi
+   {\@kernel@caption@reset
+    \@ifstar{\@captionstartrue\@caption@args}\@caption@args}%
+}
+\long\def\@caption@skip#1{\@caption@skip@star}
+\protected\def\@caption@skip@star{%
+  \@ifstar\@caption@skip@args\@caption@skip@args}
+\def\@caption@skip@args{%
+  \kernel@ifnextchar[\@caption@skip@opt{\@caption@skip@opt[]}}
+\long\def\@caption@skip@opt[#1]#2{}
+\def\@caption@args{%
+  \kernel@ifnextchar[\@caption@read{\@caption@read[\NoValue]}}
+\long\def\@caption@read[#1]#2{%
+  \expandafter\@caption@process\expandafter{\@captype}{#1}{#2}}
+\long\def\@caption@process#1#2#3{%
+  \if@captionstar
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+  {\UseHookWithArguments{caption/before}{4}{#1}{\BooleanTrue}{#2}{#3}%
+   \IfNoValueTF{#2}%
+     {\@caption{#1}[{#3}]{#3}}%
+     {\@caption{#1}[{#2}]{#3}}}%
+  {\UseHookWithArguments{caption/before}{4}{#1}{\BooleanFalse}{#2}{#3}%
+   \UseSocket{caption/step}{#1}%
+   \IfNoValueTF{#2}%
+     {\@caption{#1}[{#3}]{#3}}%
+     {\@caption{#1}[{#2}]{#3}}}}
+%    \end{macrocode}
+%    \cs{@kernel@caption@reset} sets \cs{if@captionstar} false and
+%    \cs{if@captionstep} and \cs{if@captiontarget} true, which is the state
+%    outside of a caption. The kernel \cs{caption} starts with it and the
+%    kernel \cs{@caption} ends with it. It is defined together with
+%    \cs{caption} (also by \pkg{latexrelease}), so after a roll-back to an
+%    earlier date it is undefined, as \cs{@kernel@caption}.
+%    \begin{macrocode}
+\def\@kernel@caption@reset{%
+  \@captionstarfalse
+  \@captionsteptrue
+  \@captiontargettrue}
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\caption}{caption arguments}%
+%<latexrelease>\def\caption{%
+%<latexrelease>   \ifx\@captype\@undefined
+%<latexrelease>     \@latex@error{\noexpand\caption outside float}\@ehd
+%<latexrelease>     \expandafter\@gobble
+%<latexrelease>   \else
+%<latexrelease>     \refstepcounter\@captype
+%<latexrelease>     \expandafter\@firstofone
+%<latexrelease>   \fi
+%<latexrelease>   {\@dblarg{\@caption\@captype}}%
+%<latexrelease>}
+%<latexrelease>\let\@kernel@caption@reset\@undefined
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+% \end{macro}
+%
+% \begin{macro}{\@caption}
+% \begin{macro}{\@caption@body}
+% \changes{v1.0b}{1994/03/28}
+%     {Use \cs{normalsize} not \cs{@normalsize}}
+% \changes{v1.1r}{1996/12/06}
+%     {Call \cs{@setminpage} if needed. latex/2318}
+% \changes{v1.2k}{2026-10-06}
+%     {No list entry and the label \cs{@caption@nolabel} for \cs{caption*};
+%      end with \cs{@kernel@caption@reset}}
+%    \cs{@caption}\marg{type}\oarg{list text}\marg{text} keeps its
+%    signature, so code that wraps or replaces it keeps working.
+%    The typesetting (with \cs{@parboxrestore} and \cs{@makecaption})
+%    is now done by \cs{@kernel@caption@typeset}. At the end
+%    \cs{@kernel@caption@reset} resets the switches, so that code which
+%    calls \cs{@caption} or
+%    the socket \texttt{caption/step} directly (without \cs{caption}) gets
+%    a normal caption.
+%    \begin{macrocode}
+%</2ekernel>
+%<*2ekernel|latexrelease>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\@caption}{caption body}%
+\long\def\@caption#1[#2]#3{%
+  \par
+  \if@captionstar
+    \expandafter\@firstoftwo
+  \else
+    \expandafter\@secondoftwo
+  \fi
+  {\@caption@body{#1}{\BooleanTrue}}%
+  {\@caption@body{#1}{\BooleanFalse}}%
+  {#2}{#3}%
+  \@kernel@caption@reset}
+\long\def\@caption@body#1#2#3#4{%
+  \IfBooleanF{#2}%
+    {\addcontentsline{\csname ext@#1\endcsname}{#1}%
+       {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #3}}}%
+  \@kernel@caption@typeset{#1}{#2}{#4}}
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\@caption}{caption body}%
+%<latexrelease>\long\def\@caption#1[#2]#3{%
+%<latexrelease>  \par
+%<latexrelease>  \addcontentsline{\csname ext@#1\endcsname}{#1}%
+%<latexrelease>    {\protect\numberline{\csname the#1\endcsname}{\ignorespaces #2}}%
+%<latexrelease>  \begingroup
+%<latexrelease>    \@parboxrestore
+%<latexrelease>    \if@minipage
+%<latexrelease>      \@setminipage
+%<latexrelease>    \fi
+%<latexrelease>    \normalsize
+%<latexrelease>    \@makecaption{\csname fnum@#1\endcsname}{\ignorespaces #3}\par
+%<latexrelease>  \endgroup}
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
+%    \end{macrocode}
+% \end{macro}
+% \end{macro}
+%
+% \begin{macro}{\@kernel@caption}
+% \changes{v1.2k}{2026-10-06}{Macro added}
+%    A copy of the kernel definition of \cs{caption} (the naming follows
+%    \cs{@kernel@refstepcounter}). Code that keeps its own \cs{caption}
+%    can pass \cs{caption*} to it (with
+%    \verb|\@ifstar{\@kernel@caption*}{|\ldots\verb|}|), and code that
+%    has replaced \cs{caption} can restore it.
+%
+%    It is defined only if the kernel has the caption interface: after a
+%    roll-back with \pkg{latexrelease} to an earlier date it is
+%    undefined, and a roll-forward defines it again. The same holds for
+%    \cs{@kernel@caption@reset}, which is defined together with
+%    \cs{caption}. Therefore |\ifdefined\@kernel@caption| is the test for
+%    the interface, for releases, roll-back, roll-forward and development
+%    formats alike. There is no test whether \cs{caption} still is the
+%    kernel's: a meaning test cannot tell wrappers from replacements.
+%    \begin{macrocode}
+%</2ekernel>
+%<*2ekernel|latexrelease>
+%<latexrelease>\IncludeInRelease{2026/11/01}%
+%<latexrelease>                 {\@kernel@caption}{caption interface copies}%
+\let\@kernel@caption\caption
+%</2ekernel|latexrelease>
+%<latexrelease>\EndIncludeInRelease
+%<latexrelease>\IncludeInRelease{0000/00/00}%
+%<latexrelease>                 {\@kernel@caption}{caption interface copies}%
+%<latexrelease>\let\@kernel@caption\@undefined
+%<latexrelease>\EndIncludeInRelease
+%<*2ekernel>
 %    \end{macrocode}
 % \end{macro}
 %

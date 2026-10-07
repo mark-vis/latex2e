@@ -107,7 +107,8 @@
 % \pkg{hyperref} doesn't patch the caption commands anymore if \cs{DocumentMetadata} is used.
 % The code here has to add a target for links. To improve the linking behavior,
 % it add this target at the begin of the float (and at the begin of split if the float is split)
-% and changes \cs{caption} so that a link to a caption label will go to this target.
+% and uses a plug of the kernel socket \texttt{caption/step}, so that a link to a
+% caption label will go to this target.
 %
 % \section{Keys}
 %
@@ -786,37 +787,63 @@
 %    \end{macrocode}
 % \end{plugdecl}
 %
-% \subsubsection{Redefinitions}
+% \begin{plugdecl}{nolabel (tagsupport/caption/label/begin)}
+% \begin{plugdecl}{nolabel (tagsupport/caption/label/end)}
+% \changes{0.81q}{2026-10-06}{Plugs \texttt{nolabel} for \cs{caption*}}
+% For a caption without a label (\cs{caption*}): no \texttt{Lbl} structure,
+% but the paragraph is handled as with a label. The paragraph is started
+% without para tagging, so that the following \texttt{para/begin} socket
+% starts the only \texttt{P} (with the plugs \plug{noop} the paragraph would
+% be started by the caption text after \texttt{para/begin}, which gave a
+% second \texttt{P} and unbalanced para hooks).
+%    \begin{macrocode}
+\NewTaggingSocketPlug{caption/label/begin}{nolabel}
+  {
+    \tagpdfparaOff
+  }
+\NewTaggingSocketPlug{caption/label/end}{nolabel}
+  {
+    \leavevmode
+    \tagpdfparaOn
+  }
+%    \end{macrocode}
+% \end{plugdecl}
+% \end{plugdecl}
 %
-% With hyperref that means that the \cs{refstepcounter} now can affect spacing so we
-% change that to the kernel refstepcounter:
+% \subsubsection{Stepping the counter}
+%
+% \changes{0.81q}{2026-10-06}{Use the kernel socket \texttt{caption/step}
+%   instead of redefining \cs{caption}}
+% With hyperref the \cs{refstepcounter} now can affect spacing, so the caption
+% should not make a new target inside a float but use the target at the
+% begin of the float. The kernel \cs{caption} steps the counter through the
+% socket \texttt{caption/step}, so we only need a plug and no longer redefine
+% \cs{caption}. It is a normal socket and not a tagging socket, because the
+% float target is also used if tagging is not active.
+% \begin{plugdecl}{latex-lab (caption/step)}
+% If a caption is used outside a float no
+% target has been set and \cs{@current@float@struct} is empty, so the
+% kernel plug makes a target as \cs{refstepcounter} does. Otherwise the
+% caption uses the target at the begin of the float (we use \cs{@captype}
+% to support autoref): the plug stores its name, locally, as the float
+% target \cs{@floatHref@}\meta{type} that the kernel plug uses, and then
+% uses the kernel plug. This is only done for the counter of the float
+% type (\cs{@captype}), as the redefinition of \cs{caption} did before;
+% other code that uses the socket for another counter (e.g., for a
+% sub-caption) gets the kernel plug.
 %    \begin{macrocode}
-\def\caption{%
-   \ifx\@captype\@undefined
-     \@latex@error{\noexpand\caption\c_space_tl outside~float}\@ehd
-     \expandafter\@gobble
-   \else
-%    \end{macrocode}
-% if a caption is used outside a float no
-% target has been set and \cs{@current@float@struct} is empty
-%    \begin{macrocode}
-     \tl_if_empty:NTF\@current@float@struct
+\NewSocketPlug{caption/step}{latex-lab}
+  {
+    \tl_if_empty:NF \@current@float@struct
       {
-        \refstepcounter\@captype
+        \str_if_eq:eeT { #1 } { \cs_if_exist_use:N \@captype }
+          { \cs_set_nopar:cpe { @floatHref@ #1 } { \@captype.struct.\@current@float@struct } }
       }
-      {
-        \@kernel@refstepcounter\@captype
+    \@kernel@caption@step {#1}
+  }
+\AssignSocketPlug{caption/step}{latex-lab}
 %    \end{macrocode}
-% we need to reset the target for \cs{addcontentsline}.
-% We use \cs{@captype} to support autoref.
-%    \begin{macrocode}
-        \xdef\@currentHref{\@captype.struct.\@current@float@struct}%
-      }
-     \expandafter\@firstofone
-   \fi
-   {\@dblarg{\@caption\@captype}}%
-}
-%    \end{macrocode}
+% \end{plugdecl}
 %
 % \begin{macro}{\@makecaption}
 % \cs{@makecaption} is defined by the classes so we overwrite it for now
@@ -829,6 +856,19 @@
     \long\def\@makecaption#1#2{%
       \UseHookWithArguments{cmd/@makecaption/before}{2}{#1}{#2}%
       \vskip\abovecaptionskip
+%    \end{macrocode}
+% \cs{caption*} has no label (\cs{if@captionstar} is true and the first
+% argument is \cs{@caption@nolabel}, which typesets nothing), so the label
+% sockets are disabled locally, and the label tagging sockets get the plugs
+% \plug{nolabel}.
+% \changes{0.81q}{2026-10-06}{Support for \cs{caption*}}
+%    \begin{macrocode}
+      \legacy_if:nT { @captionstar }
+        {
+          \AssignSocketPlug{caption/label}{noop}
+          \AssignTaggingSocketPlug{caption/label/begin}{nolabel}
+          \AssignTaggingSocketPlug{caption/label/end}{nolabel}
+        }
 %    \end{macrocode}
 % We don't want tagging when storing the caption for the singleline check.
 % \changes{0.81l}{2025-10-17}{Measure \texttt{caption/label} socket instead of hard-coded colon and space, tagging issue 935}

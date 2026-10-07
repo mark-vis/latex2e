@@ -1,0 +1,33 @@
+% Roll-back of the caption interface: with latexrelease 2026-06-01 the
+% old \caption and \@caption are back, \@kernel@caption and
+% \@kernel@caption@reset are undefined, the hook is not executed, and
+% the guarded declarations give no errors.
+\RequirePackage[2026-06-01]{latexrelease}
+\documentclass{article}
+\input{regression-test}
+\makeatletter
+\def\showcommands{%
+  \typeout{\string\@kernel@caption:
+    \ifdefined\@kernel@caption defined\else undefined\fi,
+    \string\@kernel@caption@reset:
+    \ifdefined\@kernel@caption@reset defined\else undefined\fi}}
+\AddToHookWithArguments{caption/before}{\typeout{BEFORE: #1}}
+\let\ORImakecaption\@makecaption
+\long\def\@makecaption#1#2{%
+  \typeout{MAKECAPTION: [\detokenize{#1}] [\detokenize{#2}]}%
+  \ORImakecaption{#1}{#2}}
+\makeatother
+\begin{document}
+\START
+\TEST{interface commands after the roll-back}{\showcommands}
+\TEST{caption after the roll-back: old code, no hooks}{%
+  \begin{figure}
+    \caption{Normal}
+    \typeout{figure=\thefigure}
+  \end{figure}}
+\TEST{caption* after the roll-back: the star is the caption text}{%
+  \begin{figure}
+    \caption*{Star}
+    \typeout{figure=\thefigure}
+  \end{figure}}
+\END

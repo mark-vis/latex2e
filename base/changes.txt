@@ -14,6 +14,17 @@ not part of the distribution.
 
 2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
 
+	* ltfloat.dtx, clsguide.tex:
+	Add \caption* and the first part of a caption interface: hook
+	caption/before, socket caption/step, switches \if@captionstep and
+	\if@captiontarget; \caption no longer uses \@dblarg. \caption* does
+	not step the counter, sets no target and writes no list entry; its
+	label \@caption@nolabel typesets nothing. A caption that does not
+	step its counter uses the float target, if there is one, and makes
+	no other target. \@kernel@caption is a copy of \caption (undefined
+	after a roll-back, so \ifdefined\@kernel@caption tests for the
+	interface)
+
 	* ltfloat.dtx:
 	\caption outside a float skips its star and arguments after the error
 
