@@ -319,6 +319,8 @@
 %      caption, as before. Such code has to be changed (for example by
 %      keeping the kernel \cs{caption} and using the hooks and sockets
 %      described here); the kernel cannot do it, because it is not called.
+%      For \pkg{float}, which is no longer maintained, the first aid lets
+%      \cs{caption*} use the kernel definition.
 %    \end{itemize}
 %
 %    The declarations are also written to \texttt{latexrelease}, guarded,
@@ -1089,8 +1091,8 @@
 %    the command for
 %    code that keeps its own \cs{caption} and passes only \cs{caption*}
 %    to the kernel (for example with
-%    \verb|\@ifstar{\@kernel@caption*}{|\ldots\verb|}|): such code
-%    must start its own numbered
+%    \verb|\@ifstar{\@kernel@caption*}{|\ldots\verb|}|, as the first aid
+%    for \pkg{float} does): such code must start its own numbered
 %    \cs{caption} with \cs{@kernel@caption@reset}, otherwise the settings
 %    of a \cs{caption*} before it in the same float are still active (no
 %    label, no list entry, the target name of the \cs{caption*}). As

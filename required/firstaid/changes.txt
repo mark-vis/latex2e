@@ -1,3 +1,11 @@
+2026-10-06  Mark Vis  <118430440+mark-vis@users.noreply.github.com>
+
+	* latex2e-first-aid-for-external-files.dtx (subsection{The \pkg{float} package first aid}):
+	\caption* uses the kernel definition when float is loaded (float's
+	\caption does not know the star form); restyled floats keep the
+	caption code of their style; a numbered \caption after \caption*
+	in the same float is unchanged; it starts with \@kernel@caption@reset
+
 2026-10-02  Frank Mittelbach  <Frank.Mittelbach@latex-project.org>
 
 	* latex2e-first-aid-for-external-files.dtx (subsection{First aid for AMS classes}):

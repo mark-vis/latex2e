@@ -233,6 +233,12 @@ Code labels for sorting:
 Data structure for label rules:
  firstaid/aliascounter = 0 -> 
 [lthooks] Handled code for firstaid/aliascounter
+[lthooks] Update code for hook 'package/float/after' on input line ...:
+Code labels for sorting:
+ firstaid
+Data structure for label rules:
+ firstaid = 0 -> 
+[lthooks] Handled code for firstaid
 [lthooks] Update code for hook 'package/cellspace/after' on input line ...:
 Code labels for sorting:
  firstaid
@@ -267,6 +273,7 @@ Data structure for label rules:
  class/amsproc/after -> \__hook_toplevel class/amsproc/after \@amsthm@reset@ynthm \AddToHook {package/cleveref/after}[firstaid/aliascounter]{\let \@ynthm \@amsthm@saved@ynthm }\__hook_next class/amsproc/after  
  class/amsbook/after -> \__hook_toplevel class/amsbook/after \@amsthm@reset@ynthm \AddToHook {package/cleveref/after}{\let \@ynthm \@amsthm@saved@ynthm }\__hook_next class/amsbook/after  
  package/amsthm/after -> \__hook_toplevel package/amsthm/after \@amsthm@reset@ynthm \AddToHook {package/cleveref/after}[firstaid/aliascounter]{\let \@ynthm \@amsthm@saved@ynthm }\__hook_next package/amsthm/after  
+ package/float/after -> \__hook_toplevel package/float/after \FirstAidNeededT {float}{sty}{....-..-.. v... Float enhancements (AL)}{\ifdefined \@kernel@caption \let \firstaid@float@caption \caption \def \caption {\@ifstar \firstaid@float@starcaption {\@kernel@caption@reset \firstaid@float@caption }}\fi }\__hook_next package/float/after  
  package/cellspace/after -> \__hook_toplevel package/cellspace/after \FirstAidNeededT {cellspace}{sty}{....-..-.. v... Spacing table cells (JN)}{\let \@startpbox@action \@startpbox }\__hook_next package/cellspace/after  
 [lthooks] Add to hook 'some-hook' (other-package) on input line ...
 [lthooks]    <- code from other-package,
@@ -501,6 +508,12 @@ Code labels for sorting:
 Data structure for label rules:
  firstaid/aliascounter = 0 -> 
 [lthooks] Handled code for firstaid/aliascounter
+[lthooks] Update code for hook 'package/float/after' on input line ...:
+Code labels for sorting:
+ firstaid
+Data structure for label rules:
+ firstaid = 0 -> 
+[lthooks] Handled code for firstaid
 [lthooks] Update code for hook 'package/cellspace/after' on input line ...:
 Code labels for sorting:
  firstaid
@@ -543,5 +556,6 @@ Data structure for label rules:
  class/amsproc/after -> \__hook_toplevel class/amsproc/after \@amsthm@reset@ynthm \AddToHook {package/cleveref/after}[firstaid/aliascounter]{\let \@ynthm \@amsthm@saved@ynthm }\__hook_next class/amsproc/after  
  class/amsbook/after -> \__hook_toplevel class/amsbook/after \@amsthm@reset@ynthm \AddToHook {package/cleveref/after}{\let \@ynthm \@amsthm@saved@ynthm }\__hook_next class/amsbook/after  
  package/amsthm/after -> \__hook_toplevel package/amsthm/after \@amsthm@reset@ynthm \AddToHook {package/cleveref/after}[firstaid/aliascounter]{\let \@ynthm \@amsthm@saved@ynthm }\__hook_next package/amsthm/after  
+ package/float/after -> \__hook_toplevel package/float/after \FirstAidNeededT {float}{sty}{....-..-.. v... Float enhancements (AL)}{\ifdefined \@kernel@caption \let \firstaid@float@caption \caption \def \caption {\@ifstar \firstaid@float@starcaption {\@kernel@caption@reset \firstaid@float@caption }}\fi }\__hook_next package/float/after  
  package/cellspace/after -> \__hook_toplevel package/cellspace/after \FirstAidNeededT {cellspace}{sty}{....-..-.. v... Spacing table cells (JN)}{\let \@startpbox@action \@startpbox }\__hook_next package/cellspace/after  
  some-hook -> code to run when other-package is loaded,code from other-package,\__hook_toplevel some-hook \__hook_next some-hook  

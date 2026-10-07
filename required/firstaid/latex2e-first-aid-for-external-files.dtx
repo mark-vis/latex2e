@@ -112,8 +112,8 @@
 %    \end{macrocode}
 %
 %    \begin{macrocode}
-\def\LaTeXFirstAidDate{2026-10-02}
-\def\LaTeXFirstAidVersion{v1.1z}
+\def\LaTeXFirstAidDate{2026-10-06}
+\def\LaTeXFirstAidVersion{v1.2a}
 %    \end{macrocode}
 %
 %    \begin{macrocode}
@@ -1143,6 +1143,68 @@
 %
 %
 %
+%
+% \subsection{The \pkg{float} package first aid}
+%
+% \changes{v1.2a}{2026-10-06}{First aid for \cs{caption*} with \pkg{float}}
+%    \pkg{float} replaces \cs{caption} by a definition that does not
+%    know the star form, so with it \verb|\caption*{Text}| gives a
+%    numbered caption with the text `*' and a list entry, followed by
+%    `Text'. As the package is no longer maintained, we let \cs{caption*}
+%    use the kernel definition if the kernel has the caption interface
+%    (\cs{@kernel@caption} is defined); \cs{caption} without star keeps
+%    the definition of \pkg{float}. For a float type restyled by
+%    \pkg{float}, the caption code of its style
+%    (\cs{@float@c@}\meta{type}) is used as \cs{@caption} for this one
+%    caption, so the caption gets the layout of the style. That code
+%    uses \cs{fnum@}\meta{type} and \cs{ext@}\meta{type} as the kernel
+%    did, so the kernel's settings for a replaced \cs{@caption} give a
+%    caption without label and without list entry, and \pkg{float}'s
+%    optional argument after the caption still works, because
+%    \cs{@caption} is the last token of \cs{caption*}.
+%
+%    The kernel's settings for a replaced \cs{@caption} last until the
+%    next \cs{caption}, but here the next \cs{caption} can be the one of
+%    \pkg{float}, which does not know them. So \cs{caption} without star
+%    first undoes them with \cs{@kernel@caption@reset}, which also resets
+%    \cs{if@captionstar}; otherwise a numbered caption after a
+%    \cs{caption*} in the same float would have no label, no list entry
+%    and the target name of the \cs{caption*}. (A float restyled by
+%    \pkg{float} shows only its last caption, as before: \pkg{float}
+%    keeps one caption per float.)
+%    \begin{macrocode}
+\AddToHook{package/float/after}[firstaid]{%
+  \FirstAidNeededT{float}{sty}%
+    {2001/11/08 v1.3d Float enhancements (AL)}%
+    {\ifdefined\@kernel@caption
+       \let\firstaid@float@caption\caption
+       \def\caption{%
+         \@ifstar\firstaid@float@starcaption
+           {\@kernel@caption@reset\firstaid@float@caption}}%
+     \fi}%
+}
+%    \end{macrocode}
+%    \cs{firstaid@float@starcaption} sets \cs{@caption} to a definition
+%    that restores the previous \cs{@caption} and continues with
+%    \cs{@float@c@}\meta{type}, if the type has been restyled, and then
+%    calls the kernel \cs{caption*}. (The test with \cs{csname} makes an
+%    undefined \cs{@float@c@}\meta{type} \cs{relax}, as \pkg{float}
+%    itself does.)
+%    \begin{macrocode}
+\def\firstaid@float@starcaption{%
+  \ifx\@captype\@undefined\else
+    \expandafter\ifx\csname @float@c@\@captype\endcsname\relax\else
+      \let\firstaid@float@savedcaption\@caption
+      \expandafter\def\expandafter\@caption\expandafter{%
+        \expandafter\firstaid@float@onecaption
+          \csname @float@c@\@captype\endcsname}%
+    \fi
+  \fi
+  \@kernel@caption*}
+\def\firstaid@float@onecaption#1{%
+  \let\@caption\firstaid@float@savedcaption
+  #1}
+%    \end{macrocode}
 %
 % \subsection{The \pkg{cellspace} package first aid}
 %
